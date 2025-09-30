@@ -9,14 +9,37 @@ const addToCart = async (
   try {
     console.log("Entered successfully.");
     const userId = req.user?.userId;
-    const { productId, quantity, size, color } = req.body;
-
     if (!userId) {
       res.status(401).json({
         success: false,
         message: "Unauthenticated user",
       });
 
+      return;
+    }
+    const { productId, quantity, size, color } = req.body;
+    // Add this validation
+    if (!productId || !quantity) {
+      res.status(400).json({
+        success: false,
+        message: "Product ID and quantity are required",
+      });
+      return;
+    }
+    const productExisted = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!productExisted) {
+      res.status(402).json({
+        success: false,
+        message: "Product does not exists in the database",
+      });
+    }
+    if (quantity <= 0) {
+      res.status(400).json({
+        success: false,
+        message: "Quantity must be greater than 0",
+      });
       return;
     }
 
@@ -56,7 +79,7 @@ const addToCart = async (
         images: true,
       },
     });
-    console.log("Product is her e, ", product);
+    console.log("Product is here, ", product);
 
     const responseItem = {
       id: cartItem.id,
@@ -283,5 +306,5 @@ export {
   getCart,
   removeFromCart,
   updateCartItemQuantity,
-  clearEntireCart
-}
+  clearEntireCart,
+};
