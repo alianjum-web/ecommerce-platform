@@ -38,7 +38,7 @@ async function setTokens(
   });
 }
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -71,7 +71,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
     const extractCurrentUser = await prisma.user.findUnique({
@@ -114,7 +114,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const refreshAccessToken = async (
+const refreshAccessToken = async (
   req: Request,
   res: Response
 ): Promise<void> => {
@@ -158,7 +158,7 @@ export const refreshAccessToken = async (
   }
 };
 
-export const logout = async (req: Request, res: Response): Promise<void> => {
+const logout = async (req: Request, res: Response): Promise<void> => {
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
   res.status(200).json({
@@ -166,3 +166,10 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     message: "User logged out successfully",
   });
 };
+
+export {
+  register,
+  login, 
+  refreshAccessToken,
+  logout
+}

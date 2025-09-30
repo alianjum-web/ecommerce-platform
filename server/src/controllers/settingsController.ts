@@ -4,7 +4,7 @@ import cloudinary from "../config/cloudinary";
 import { prisma } from "../server";
 import fs from "fs";
 
-export const addFeatureBanners = async (
+const addFeatureBanners = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -51,7 +51,7 @@ export const addFeatureBanners = async (
   }
 };
 
-export const fetchFeatureBanners = async (
+const fetchFeatureBanners = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -73,7 +73,7 @@ export const fetchFeatureBanners = async (
   }
 };
 
-export const updateFeaturedProducts = async (
+const updateFeaturedProducts = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -112,7 +112,7 @@ export const updateFeaturedProducts = async (
   }
 };
 
-export const getFeaturedProducts = async (
+const getFeaturedProducts = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -133,3 +133,10 @@ export const getFeaturedProducts = async (
     });
   }
 };
+
+export {
+  addFeatureBanners,
+  fetchFeatureBanners,
+  updateFeaturedProducts,
+  getFeaturedProducts
+}

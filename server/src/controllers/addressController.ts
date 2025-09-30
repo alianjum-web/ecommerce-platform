@@ -2,7 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
 
-export const createAddress = async (
+const createAddress = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -54,7 +54,7 @@ export const createAddress = async (
   }
 };
 
-export const getAddresses = async (
+const getAddresses = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -86,7 +86,7 @@ export const getAddresses = async (
   }
 };
 
-export const updateAddress = async (
+const updateAddress = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -152,7 +152,7 @@ export const updateAddress = async (
   }
 };
 
-export const deleteAddress = async (
+const deleteAddress = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -196,3 +196,10 @@ export const deleteAddress = async (
     });
   }
 };
+
+export {
+  createAddress, 
+  getAddresses,
+  updateAddress,
+  deleteAddress
+}

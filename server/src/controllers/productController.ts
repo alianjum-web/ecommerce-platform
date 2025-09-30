@@ -5,7 +5,7 @@ import { prisma } from "../server";
 import { Prisma } from "@prisma/client";
 
 // src/controllers/productController.ts
-export const createProduct = async (
+const createProduct = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -92,7 +92,7 @@ export const createProduct = async (
 };
 
 //get a single product
-export const getProductByID = async (
+const getProductByID = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -116,7 +116,7 @@ export const getProductByID = async (
   }
 };
 //update  a product (admin)
-export const updateProduct = async (
+const updateProduct = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -162,7 +162,7 @@ export const updateProduct = async (
   }
 };
 //delete a product (admin)
-export const deleteProduct = async (
+const deleteProduct = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -180,7 +180,7 @@ export const deleteProduct = async (
 };
 //fetch products with filter (client)
 
-export const getProductsForClient = async (
+const getProductsForClient = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -277,3 +277,11 @@ export const getProductsForClient = async (
     res.status(500).json({ success: false, message: "Some error occured!" });
   }
 };
+
+export {
+  createProduct,
+  getProductByID,
+  updateProduct,
+  deleteProduct,
+  getProductsForClient
+}

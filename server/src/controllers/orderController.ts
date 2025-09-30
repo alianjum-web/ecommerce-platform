@@ -26,7 +26,7 @@ async function getPaypalAccessToken() {
   return response.data.access_token;
 }
 
-export const createPaypalOrder = async (
+const createPaypalOrder = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -91,7 +91,7 @@ export const createPaypalOrder = async (
   }
 };
 
-export const capturePaypalOrder = async (
+const capturePaypalOrder = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -119,7 +119,7 @@ export const capturePaypalOrder = async (
   }
 };
 
-export const createFinalOrder = async (
+const createFinalOrder = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -210,7 +210,7 @@ export const createFinalOrder = async (
   }
 };
 
-export const getOrder = async (
+const getOrder = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -249,7 +249,7 @@ export const getOrder = async (
   }
 };
 
-export const updateOrderStatus = async (
+const updateOrderStatus = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -289,7 +289,7 @@ export const updateOrderStatus = async (
   }
 };
 
-export const getAllOrdersForAdmin = async (
+const getAllOrdersForAdmin = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -329,7 +329,7 @@ export const getAllOrdersForAdmin = async (
   }
 };
 
-export const getOrdersByUserId = async (
+const getOrdersByUserId = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -367,3 +367,13 @@ export const getOrdersByUserId = async (
     });
   }
 };
+
+export {
+  createPaypalOrder,
+  capturePaypalOrder,
+  createFinalOrder,
+  getOrder,
+  updateOrderStatus,
+  getAllOrdersForAdmin,
+  getOrdersByUserId
+}

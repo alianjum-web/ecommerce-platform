@@ -2,7 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
 
-export const createCoupon = async (
+const createCoupon = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -34,7 +34,7 @@ export const createCoupon = async (
   }
 };
 
-export const fetchAllCoupons = async (
+const fetchAllCoupons = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -56,7 +56,7 @@ export const fetchAllCoupons = async (
   }
 };
 
-export const deleteCoupon = async (
+const deleteCoupon = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -80,3 +80,9 @@ export const deleteCoupon = async (
     });
   }
 };
+
+export {
+  createCoupon,
+  fetchAllCoupons,
+  deleteCoupon
+}

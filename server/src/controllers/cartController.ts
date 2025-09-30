@@ -2,7 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
 
-export const addToCart = async (
+const addToCart = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -81,7 +81,7 @@ export const addToCart = async (
   }
 };
 
-export const getCart = async (
+const getCart = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -150,7 +150,7 @@ export const getCart = async (
   }
 };
 
-export const removeFromCart = async (
+const removeFromCart = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -186,7 +186,7 @@ export const removeFromCart = async (
   }
 };
 
-export const updateCartItemQuantity = async (
+const updateCartItemQuantity = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -244,7 +244,7 @@ export const updateCartItemQuantity = async (
   }
 };
 
-export const clearEntireCart = async (
+const clearEntireCart = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
@@ -277,3 +277,11 @@ export const clearEntireCart = async (
     });
   }
 };
+
+export {
+  addToCart,
+  getCart,
+  removeFromCart,
+  updateCartItemQuantity,
+  clearEntireCart
+}
