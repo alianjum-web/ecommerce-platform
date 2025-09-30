@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { error } from "console";
 
 function generateToken(userId: string, email: string, role: string) {
   const accessToken = jwt.sign(
@@ -160,7 +161,7 @@ export const refreshAccessToken = async (
 export const logout = async (req: Request, res: Response): Promise<void> => {
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
-  res.json({
+  res.status(200).json({
     success: true,
     message: "User logged out successfully",
   });
