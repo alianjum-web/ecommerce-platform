@@ -43,7 +43,7 @@ const createProduct = async (
             else resolve(result);
           }
         );
-        
+
         // ✅ Send the memory buffer directly to Cloudinary
         uploadStream.end(file.buffer);
       });
@@ -75,19 +75,35 @@ const createProduct = async (
     res.status(201).json({
       success: true,
       message: "Product created successfully!",
-      product: newlyCreatedProduct
+      product: newlyCreatedProduct,
     });
-    
   } catch (error) {
     console.error("Error creating product:", error);
-    
+
     // ✅ REMOVED: No file cleanup needed in error handling either
-    
-    res.status(500).json({ 
-      success: false, 
+
+    res.status(500).json({
+      success: false,
       message: "Error creating product!",
-      error: process.env.NODE_ENV === 'development' ? (error as Error)?.message : undefined
+      error:
+        process.env.NODE_ENV === "development"
+          ? (error as Error)?.message
+          : undefined,
     });
+  }
+};
+
+//fetch all products (admin side)
+const fetchAllProductsForAdmin = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const fetchAllProducts = await prisma.product.findMany();
+    res.status(200).json(fetchAllProducts);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: "Some error occured!" });
   }
 };
 
@@ -280,8 +296,9 @@ const getProductsForClient = async (
 
 export {
   createProduct,
+  fetchAllProductsForAdmin,
   getProductByID,
   updateProduct,
   deleteProduct,
-  getProductsForClient
-}
+  getProductsForClient,
+};
