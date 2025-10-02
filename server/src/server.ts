@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes";
@@ -10,6 +10,7 @@ import settingsRoutes from "./routes/settingRoutes";
 import cartRoutes from "./routes/cartRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import { error } from "console";
 
 //load all your enviroment variables
 dotenv.config();
@@ -39,6 +40,15 @@ app.use("/api/order", orderRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello from E-Commerce backend");
+});
+
+// Error handling middleware (add this at the end)
+app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+  });
 });
 
 app.listen(PORT, () => {

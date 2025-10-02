@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
+import { promise, success } from "zod";
 
 const addToCart = async (
   req: AuthenticatedRequest,
@@ -129,7 +130,7 @@ const getCart = async (
     });
 
     if (!cart) {
-      res.json({
+      res.status(404).json({
         success: false,
         messaage: "No Item found in cart",
         data: [],
@@ -162,7 +163,7 @@ const getCart = async (
       })
     );
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: cartItemsWithProducts,
     });
