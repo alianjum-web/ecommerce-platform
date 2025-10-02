@@ -1,12 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { jwtVerify, JWTPayload } from "jose";
-
 export interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
     email: string;
-    role: string;
+    role?: string; // Make role optional here too
   };
+   validatedData?: any; 
 }
 
 export const authenticateJwt = (
@@ -33,7 +33,7 @@ export const authenticateJwt = (
       req.user = {
         userId: payload.userId,
         email: payload.email,
-        role: payload.role,
+        role: payload.role || "user",
       };
       next();
     })
