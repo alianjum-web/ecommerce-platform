@@ -30,10 +30,11 @@ const addToCart = async (
       where: { id: productId },
     });
     if (!productExisted) {
-      res.status(402).json({
+      res.status(404).json({
         success: false,
         message: "Product does not exists in the database",
       });
+      return;
     }
     if (quantity <= 0) {
       res.status(400).json({
