@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { error } from "console";
 
 function generateToken(userId: string, email: string, role: string) {
   const accessToken = jwt.sign(
@@ -73,6 +72,7 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
 const login = async (req: Request, res: Response): Promise<void> => {
   try {
+
     const { email, password } = req.body;
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
@@ -95,7 +95,6 @@ const login = async (req: Request, res: Response): Promise<void> => {
       extractCurrentUser.email,
       extractCurrentUser.role
     );
-
     //set out tokens
     await setTokens(res, accessToken, refreshToken);
     res.status(200).json({
@@ -169,7 +168,7 @@ const logout = async (req: Request, res: Response): Promise<void> => {
 
 export {
   register,
-  login, 
+  login,
   refreshAccessToken,
   logout
 }
