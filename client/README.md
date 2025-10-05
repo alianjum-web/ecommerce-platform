@@ -20,17 +20,93 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+## Frontend Changes Needed 🔄
+Based on your new ApiResponse and ApiError classes, your frontend needs to handle this structure:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Success Response Format:
+```ts
+{
+  success: boolean,    // true
+  message: string,     // Your message
+  data: T,            // Your actual data (responseItem, null, etc.)
+  statusCode: number   // HTTP status code
+}
+```
+#### Error Response Format:
+```ts
+{
+  success: boolean,    // false
+  message: string,     // Error message
+  data: null,          // Always null for errors
+  statusCode: number,  // HTTP status code
+  errors: any[]        // Additional error details
+}
+```
+#### Frontend Adaptation Examples:
+##### Before:
+```ts
+// Old way
+const response = await api.delete(`/cart/${itemId}`);
+if (response.data.success) {
+  console.log(response.data.message);
+}
+```
+##### After:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```ts
+// New way - you might need to create an interceptor
+const response = await api.delete(`/cart/${itemId}`);
+const apiResponse = response.data;
 
-## Deploy on Vercel
+if (apiResponse.success) {
+  console.log(apiResponse.message);
+  // Access data: apiResponse.data
+} else {
+  console.error(apiResponse.message);
+  // Access errors: apiResponse.errors
+}
+```
+##### Recommended Frontend Utilities:
+```ts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+// api.ts - Axios interceptor
+api.interceptors.response.use(
+  (response) => {
+    // Success responses already follow ApiResponse format
+    return response;
+  },
+  (error) => {
+    // You might want to transform error responses
+    if (error.response?.data) {
+      return Promise.reject(error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+// Custom hook for API calls
+const useApi = () => {
+  const handleResponse = (response: any) => {
+    if (response.success) {
+      return response.data;
+    } else {
+      throw new Error(response.message);
+    }
+  };
+
+  return { handleResponse };
+};
+```
+#### Key Improvements Made:
+✅ Added return statements after sending responses
+
+✅ Correct HTTP status codes (400 for bad requests, 401 for unauthorized)
+
+✅ Proper data passing to ApiResponse
+
+✅ Input validation for quantity
+
+✅ Consistent response structure
+
