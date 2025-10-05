@@ -2,6 +2,9 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
 import { promise, success } from "zod";
+import { asyncHandler } from "../utils/asyncHandler";
+import { ApiError } from "../utils/ApiError";
+import { ApiResponse } from "../utils/ApiResponse";
 
 const addToCart = async (
   req: AuthenticatedRequest,
@@ -124,7 +127,7 @@ const getCart = async (
 
     const cart = await prisma.cart.findUnique({
       where: { userId },
-      include: {
+      include: {                                      // include = full nested objects
         items: true,
       },
     });
@@ -174,101 +177,79 @@ const getCart = async (
     });
   }
 };
+const removeFromCart = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { id } = req.params;
 
-const removeFromCart = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
-    }
-
-    await prisma.cartItem.delete({
-      where: {
-        id,
-        cart: { userId },
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Item is removed from cart",
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to remove from cart!",
-    });
+  if (!id) {
+    return res.status(400).json(new ApiError(400, "Item id is required"));
   }
-};
 
-const updateCartItemQuantity = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-    const { quantity } = req.body;
-
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
-    }
-
-    const updatedItem = await prisma.cartItem.update({
-      where: {
-        id,
-        cart: { userId },
-      },
-      data: { quantity },
-    });
-
-    const product = await prisma.product.findUnique({
-      where: { id: updatedItem.productId },
-      select: {
-        name: true,
-        price: true,
-        images: true,
-      },
-    });
-
-    const responseItem = {
-      id: updatedItem.id,
-      productId: updatedItem.productId,
-      name: product?.name,
-      price: product?.price,
-      image: product?.images[0],
-      color: updatedItem.color,
-      size: updatedItem.size,
-      quantity: updatedItem.quantity,
-    };
-
-    res.json({
-      success: true,
-      data: responseItem,
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update cart item quantity",
-    });
+  if (!userId) {
+    return res.status(401).json(new ApiError(401, "Unauthorized user"));
   }
-};
 
+  await prisma.cartItem.delete({
+    where: {
+      id,
+      cart: { userId }
+    }
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, null, "Item removed from cart successfully")
+  );
+});
+
+const updateCartItemQuantity = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { quantity } = req.body;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).json(new ApiError(401, "Unauthorized user"));
+  }
+
+  if (!id) {
+    return res.status(400).json(new ApiError(400, "Item id is required"));
+  }
+
+  if (typeof quantity !== 'number' || quantity < 1) {
+    return res.status(400).json(new ApiError(400, "Valid quantity is required"));
+  }
+
+  const updatedCartItem = await prisma.cartItem.update({
+    where: {
+      id,
+      cart: { userId }
+    },
+    data: { quantity }
+  });
+
+  const product = await prisma.product.findUnique({
+    where: { id: updatedCartItem.productId },
+    select: {
+      images: true,
+      name: true,
+      price: true,
+    }
+  });
+
+  const responseItem = {
+    id: updatedCartItem.id,
+    productId: updatedCartItem.productId,
+    name: product?.name,
+    price: product?.price,
+    image: product?.images[0],
+    color: updatedCartItem.color,
+    size: updatedCartItem.size,
+    quantity: updatedCartItem.quantity,
+  };
+
+  return res.status(200).json(
+    new ApiResponse(200, responseItem, "Cart item quantity updated successfully")
+  );
+});
 const clearEntireCart = async (
   req: AuthenticatedRequest,
   res: Response

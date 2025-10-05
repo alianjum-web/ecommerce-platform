@@ -9,8 +9,8 @@ export const optionalStringSchema = z.string().optional().nullable();
 export const addToCartSchema = z.object({
   productId: productIdSchema,
   quantity: quantitySchema,
-  size: optionalStringSchema,
-  color: optionalStringSchema,
+  // size: optionalStringSchema,
+  // color: optionalStringSchema,
 });
 
 // Update Cart Item Schema
