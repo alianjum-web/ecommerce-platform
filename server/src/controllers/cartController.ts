@@ -1,149 +1,115 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { prisma } from "../server";
-import { promise, success } from "zod";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 
-const addToCart = async (
+const addToCart = asyncHandler(async (
   req: AuthenticatedRequest,
   res: Response
-): Promise<void> => {
-  try {
-    console.log("Entered successfully.");
-    const userId = req.user?.userId;
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
+) => {
 
-      return;
-    }
-    const { productId, quantity, size, color } = req.body;
-    // Add this validation
-    if (!productId || !quantity) {
-      res.status(400).json({
-        success: false,
-        message: "Product ID and quantity are required",
-      });
-      return;
-    }
-    const productExisted = await prisma.product.findUnique({
-      where: { id: productId },
-    });
-    if (!productExisted) {
-      res.status(404).json({
-        success: false,
-        message: "Product does not exists in the database",
-      });
-      return;
-    }
-    if (quantity <= 0) {
-      res.status(400).json({
-        success: false,
-        message: "Quantity must be greater than 0",
-      });
-      return;
-    }
+  console.log("Entered successfully.");
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(401).json(new ApiError(401, "Unauthorized user"));
+  }
 
-    const cart = await prisma.cart.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
+  const { productId, quantity, size, color } = req.body;
+  // Add this validation
+  if (!productId || !quantity) {
+    return res.status(400).json(new ApiError(400, "Product ID and quantity are required"));
+  }
 
-    console.log("This is cart: ", cart);
-    const cartItem = await prisma.cartItem.upsert({
-      where: {
-        cartId_productId_size_color: {
-          cartId: cart.id,
-          productId,
-          size: size || null,
-          color: color || null,
-        },
-      },
-      update: {
-        quantity: { increment: quantity },
-      },
-      create: {
+  const productExisted = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+  if (!productExisted) {
+    return res.status(404).json(new ApiError(404, "Product does not exists in the database"));
+
+  }
+  if (quantity <= 0) {
+    return res.status(400).json(new ApiError(400, "Quantity must be greater than 0"))
+  }
+
+  const cart = await prisma.cart.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
+
+  console.log("This is cart: ", cart);
+  const cartItem = await prisma.cartItem.upsert({
+    where: {
+      cartId_productId_size_color: {
         cartId: cart.id,
         productId,
-        quantity,
-        size,
-        color,
+        size: size || null,
+        color: color || null,
       },
-    });
-    console.log("My cart item", cartItem);
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: {
-        name: true,
-        price: true,
-        images: true,
-      },
-    });
-    console.log("Product is here, ", product);
+    },
+    update: {
+      quantity: { increment: quantity },
+    },
+    create: {
+      cartId: cart.id,
+      productId,
+      quantity,
+      size,
+      color,
+    },
+  });
+  console.log("My cart item", cartItem);
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      name: true,
+      price: true,
+      images: true,
+    },
+  });
+  console.log("Product is here, ", product);
 
-    const responseItem = {
-      id: cartItem.id,
-      productId: cartItem.productId,
-      name: product?.name,
-      price: product?.price,
-      image: product?.images[0],
-      color: cartItem.color,
-      size: cartItem.size,
-      quantity: cartItem.quantity,
-    };
+  const responseItem = {
+    id: cartItem.id,
+    productId: cartItem.productId,
+    name: product?.name,
+    price: product?.price,
+    image: product?.images[0],
+    color: cartItem.color,
+    size: cartItem.size,
+    quantity: cartItem.quantity,
+  };
 
-    res.status(201).json({
-      success: true,
-      data: responseItem,
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Some error occured!",
-    });
-  }
-};
+  return res.status(201).json(new ApiResponse(200, responseItem, "Item added to cart."));
 
-const getCart = async (
+});
+
+const getCart = asyncHandler(async (
   req: AuthenticatedRequest,
   res: Response
-): Promise<void> => {
+) => {
   try {
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
+      return res.status(401).json(new ApiError(401, "Unauthorized user"));
     }
 
     const cart = await prisma.cart.findUnique({
       where: { userId },
-      include: {                                      // include = full nested objects
+      include: {
         items: true,
       },
     });
 
     if (!cart) {
-      res.status(404).json({
-        success: false,
-        messaage: "No Item found in cart",
-        data: [],
-      });
-
-      return;
+      return res.status(404).json(new ApiError(404, "Cart not found"));
     }
 
     const cartItemsWithProducts = await Promise.all(
-      cart?.items.map(async (item) => {
+      cart.items.map(async (item) => {
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
           select: {
@@ -166,17 +132,16 @@ const getCart = async (
       })
     );
 
-    res.status(200).json({
-      success: true,
-      data: cartItemsWithProducts,
-    });
+    res.status(200).json(
+      new ApiResponse(200, cartItemsWithProducts, "Cart fetched successfully")
+    );
   } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch cart!",
-    });
+    res.status(500).json(
+      new ApiError(500, "Failed to fetch cart!")
+    );
   }
-};
+});
+
 const removeFromCart = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.userId;
   const { id } = req.params;
@@ -250,39 +215,25 @@ const updateCartItemQuantity = asyncHandler(async (req: AuthenticatedRequest, re
     new ApiResponse(200, responseItem, "Cart item quantity updated successfully")
   );
 });
-const clearEntireCart = async (
+
+const clearEntireCart = asyncHandler(async (
   req: AuthenticatedRequest,
   res: Response
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
+) => {
+  const userId = req.user?.userId;
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
-    }
-
-    await prisma.cartItem.deleteMany({
-      where: {
-        cart: { userId },
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "cart cleared successfully!",
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to clear cart!",
-    });
+  if (!userId) {
+    return res.status(401).json(new ApiError(401, "Unauthenticated user"));
   }
-};
+
+  await prisma.cartItem.deleteMany({
+    where: {
+      cart: { userId },
+    },
+  });
+
+  return res.status(200).json(new ApiResponse(200, "cart cleared successfully!"));
+});
 
 export {
   addToCart,
