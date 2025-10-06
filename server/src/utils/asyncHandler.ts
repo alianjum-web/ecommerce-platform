@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { AuthenticatedRequest } from '../types/express';
 
 // ✅ Fixed asyncHandler with proper typing
 const asyncHandler = <T = any>(

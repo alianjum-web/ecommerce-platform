@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { AuthenticatedRequest } from "../types/express";
 import { prisma } from "../server";
 
 const createAddress = async (

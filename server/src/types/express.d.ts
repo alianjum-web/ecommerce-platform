@@ -14,4 +14,14 @@ declare global {
   }
 }
 
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role?: string;
+  };
+  validatedData?: any; 
+  body: any;
+}
+
 export {};

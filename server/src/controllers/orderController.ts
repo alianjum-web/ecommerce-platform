@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { AuthenticatedRequest } from "../types/express";
 import { NextFunction, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../server";

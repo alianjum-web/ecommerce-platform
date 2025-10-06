@@ -1,63 +1,49 @@
-import { NextFunction, Request, Response } from "express";
-import { jwtVerify, JWTPayload } from "jose";
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role?: string; // Make role optional here too
-  };
-   validatedData?: any; 
-}
+// src/middleware/authMiddleware.ts
+import { NextFunction, Response } from "express";
+import { jwtVerify } from "jose";
+import { AuthenticatedRequest } from "../types/express";
 
-export const authenticateJwt = (
+export const authenticateJwt = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-) => {
-  const accessToken = req.cookies.accessToken;
-  if (!accessToken) {
-    res
-      .status(401)
-      .json({ success: false, error: "Access token is not present" });
-    return;
+): Promise<void> => {
+  try {
+    const accessToken = req.cookies?.accessToken || 
+                       req.headers.authorization?.replace('Bearer ', '');
+
+    if (!accessToken) {
+      res.status(401).json({ success: false, error: "Access token is not present" });
+      return;
+    }
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+    const { payload } = await jwtVerify(accessToken, secret);
+
+    req.user = {
+      userId: payload.userId as string,
+      email: payload.email as string,
+      role: payload.role as string || "user",
+    };
+    
+    next();
+  } catch (error) {
+    console.error("JWT verification error:", error);
+    res.status(401).json({ success: false, error: "Invalid or expired token" });
   }
-
-  jwtVerify(accessToken, new TextEncoder().encode(process.env.JWT_SECRET))
-    .then((res) => {
-      const payload = res.payload as JWTPayload & {
-        userId: string;
-        email: string;
-        role: string;
-      };
-
-      req.user = {
-        userId: payload.userId,
-        email: payload.email,
-        role: payload.role || "user",
-      };
-      next();
-    })
-    .catch((e) => {
-      console.error(e);
-      res
-        .status(401)
-        .json({ success: false, error: "Access token is not present" });
-    });
 };
 
 export const isSuperAdmin = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   if (req.user && req.user.role === "SUPER_ADMIN") {
     next();
   } else {
-    res
-      .status(403)
-      .json({
-        success: false,
-        error: "Access denied! Super admin access required",
-      });
+    res.status(403).json({
+      success: false,
+      error: "Access denied! Super admin access required",
+    });
   }
 };

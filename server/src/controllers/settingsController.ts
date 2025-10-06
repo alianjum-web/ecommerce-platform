@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { AuthenticatedRequest } from "../types/express";
 import cloudinary from "../config/cloudinary";
 import { prisma } from "../server";
 import fs from "fs";

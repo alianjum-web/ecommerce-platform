@@ -1,18 +1,35 @@
 // src/middleware/uploadMiddleware.ts
-import multer from "multer";
+import multer, { FileFilterCallback } from 'multer';
+import { Request } from 'express';
 
-// Use memory storage - NO local files
-export const upload = multer({
-  storage: multer.memoryStorage(), // Files stored as buffers in memory
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Not an image! Please upload only images."));
-    }
-  },
-  limits: { 
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-    files: 5 // Maximum 5 files
+const storage = multer.memoryStorage();
+
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback
+): void => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'));
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
+
+// Export specific upload configurations
+export const uploadSingle = upload.single('image');
+export const uploadMultiple = upload.array('images', 5); // ← Use this
+export const uploadFields = upload.fields([
+  { name: 'avatar', maxCount: 1 },
+  { name: 'gallery', maxCount: 4 }
+]);
+
+export { upload };

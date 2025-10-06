@@ -1,7 +1,7 @@
 // src/middleware/validation.ts
 import { Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthenticatedRequest } from './authMiddleware';
+import { AuthenticatedRequest } from '../types/express';
 
 export const validate = (schema: z.ZodSchema) => {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {

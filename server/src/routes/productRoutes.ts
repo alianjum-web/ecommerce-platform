@@ -1,6 +1,6 @@
-import expess from "express";
+import express from "express";
 import { authenticateJwt, isSuperAdmin } from "../middleware/authMiddleware";
-import { upload } from "../middleware/uploadMiddleware";
+import { uploadMultiple } from "../middleware/uploadMiddleware"; // ← Import the specific one
 import {
   createProduct,
   deleteProduct,
@@ -10,13 +10,13 @@ import {
   getProductsForClient,
 } from "../controllers/productController";
 
-const router = expess.Router();
+const router = express.Router();
 
 router.post(
   "/create-new-product",
   authenticateJwt,
   isSuperAdmin,
-  upload.array("images", 5),
+  uploadMultiple, // ✅ Use the pre-configured one
   createProduct
 );
 
