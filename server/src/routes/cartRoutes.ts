@@ -8,7 +8,8 @@ import {
   updateCartItemQuantity,
 } from "../controllers/cartController";
 import { validate } from "../middleware/validation";
-import { addToCartSchema } from "../schema/cartSchema";
+import { addToCartSchema } from "../validations/cartSchema";
+
 const router = express.Router();
 
 router.get("/fetch-cart", authenticateJwt, getCart);

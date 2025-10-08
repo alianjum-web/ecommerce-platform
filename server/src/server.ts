@@ -17,12 +17,35 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+const corsOptions: cors.CorsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) {
+      console.log("🌐 CORS: Allowing request with no origin");
+      return callback(null, true);
+    }
+    
+    const allowedOrigins = [
+      "https://ecommerce-platform-with-prisma.vercel.app",
+      "http://localhost:3000", 
+      "http://localhost:3001",
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log("✅ CORS: Allowed origin:", origin);
+      callback(null, true);
+    } else {
+      console.log("🚫 CORS Blocked origin:", origin);
+      console.log("📋 Allowed origins:", allowedOrigins);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
+
 
 app.use(cors(corsOptions));
 app.use(express.json());

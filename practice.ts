@@ -1,13 +1,50 @@
-// FUNCTION addToCart(request):
-// 1. Extract userId from authenticated request.
-// 2. If no userId → return 401 "Unauthenticated user".
-// 3. Extract productId, quantity, size, color from request body.
-// 4. Try to find an existing cart for this user.
-//    - If not found, create one.
-// 5. Try to find an existing cart item with same:
-//       cartId + productId + size + color.
-//    - If found → increase quantity.
-//    - If not found → create new cart item.
-// 6. Fetch product details (name, price, image) to attach in response.
-// 7. Return JSON with updated/created cart item.
-// 8. If any error happens → return 500.
+// FUNCTION createPaypalOrder(items, total):
+//    1. GET access_token by calling getPaypalAccessToken()
+   
+//    2. TRANSFORM cart items to PayPal format:
+//       FOR EACH item in items:
+//          name = item.name
+//          description = item.description (or empty string)
+//          sku = item.id
+//          unit_amount = {
+//             currency_code: "USD",
+//             value: formatPrice(item.price)  // 2 decimal places
+//          }
+//          quantity = string version of item.quantity
+//          category = "PHYSICAL_GOODS"
+
+//    3. CALCULATE item total:
+//       itemTotal = 0
+//       FOR EACH paypalItem in paypalItems:
+//          price = parseFloat(paypalItem.unit_amount.value)
+//          qty = parseInt(paypalItem.quantity)
+//          itemTotal += (price * qty)
+
+//    4. CREATE PayPal order payload:
+//       {
+//          intent: "CAPTURE",
+//          purchase_units: [
+//             {
+//                amount: {
+//                   currency_code: "USD",
+//                   value: formatPrice(total),
+//                   breakdown: {
+//                      item_total: {
+//                         currency_code: "USD", 
+//                         value: formatPrice(itemTotal)
+//                      }
+//                   }
+//                },
+//                items: paypalItems
+//             }
+//          ]
+//       }
+
+//    5. MAKE POST request to create order:
+//       URL: BASE_URL + "/v2/checkout/orders"
+//       HEADERS:
+//          - Content-Type: "application/json"
+//          - Authorization: "Bearer {access_token}"
+//          - PayPal-Request-ID: generateUniqueId()
+
+//    6. RETURN order data to frontend

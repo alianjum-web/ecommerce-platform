@@ -1,11 +1,14 @@
-
+// lib/api-config.ts
+export const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:4001/api'  // Development
+  : 'https://ecommerce-platform-1vre.onrender.com/api'; // Production
 
 export const API_ROUTES = {
-  AUTH: `${process.env.NEXT_PUBLIC_API_URL}/auth`,
-  PRODUCTS: `${process.env.NEXT_PUBLIC_API_URL}/products`,
-  COUPON: `${process.env.NEXT_PUBLIC_API_URL}/coupon`,
-  SETTINGS: `${process.env.NEXT_PUBLIC_API_URL}/settings`,
-  CART: `${process.env.NEXT_PUBLIC_API_URL}/cart`,
-  ADDRESS: `${process.env.NEXT_PUBLIC_API_URL}/address`,
-  ORDER: `${process.env.NEXT_PUBLIC_API_URL}/order`,
+  AUTH: `${API_BASE_URL}/auth`,
+  PRODUCTS: `${API_BASE_URL}/products`,
+  COUPON: `${API_BASE_URL}/coupon`,
+  SETTINGS: `${API_BASE_URL}/settings`,
+  CART: `${API_BASE_URL}/cart`,
+  ADDRESS: `${API_BASE_URL}/address`,
+  ORDER: `${API_BASE_URL}/order`,
 };
