@@ -215,7 +215,7 @@ const updateCartItemQuantity = asyncHandler(async (req: AuthenticatedRequest, re
     new ApiResponse(200, responseItem, "Cart item quantity updated successfully")
   );
 });
-
+// all the items in the cart with the userId - for 1 item use delete()
 const clearEntireCart = asyncHandler(async (
   req: AuthenticatedRequest,
   res: Response
