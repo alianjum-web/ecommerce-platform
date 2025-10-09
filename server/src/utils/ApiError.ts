@@ -1,3 +1,4 @@
+// src/utils/ApiError.ts
 class ApiError extends Error {
     public statusCode: number;
     public data: null;
@@ -17,10 +18,13 @@ class ApiError extends Error {
         this.success = false;
         this.errors = errors;
 
+        // ✅ FIX: Check if captureStackTrace exists (Node.js environment)
         if (stack) {
             this.stack = stack;
-        } else {
+        } else if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
+        } else {
+            this.stack = new Error().stack;
         }
     }
 }

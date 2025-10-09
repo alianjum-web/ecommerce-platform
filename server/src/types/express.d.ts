@@ -10,6 +10,12 @@ declare global {
         email: string;
         role?: string;
       };
+      // ✅ ADD THESE MISSING PROPERTIES
+      query: any;
+      params: any;
+      cookies: any;
+      headers: any;
+      files?: any;
     }
   }
 }
@@ -21,7 +27,13 @@ export interface AuthenticatedRequest extends Request {
     role?: string;
   };
   validatedData?: any; 
+  // ✅ ENSURE THESE ARE INCLUDED
   body: any;
+  query: any;
+  params: any;
+  cookies: any;
+  headers: any;
+  files?: any;
 }
 
 export {};
