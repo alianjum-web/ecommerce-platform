@@ -11,7 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "render-build": "npm run prisma:generate && npm run build" 
+     "render-build": "npm run prisma:generate && npm run build && npm run prisma:seed"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

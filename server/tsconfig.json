@@ -2,26 +2,27 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "lib": ["ES2020", "DOM"], // ✅ ADD: For modern JS features
+    "lib": ["ES2020", "DOM"],
     "outDir": "./dist",
-    "rootDir": "./src",       // ✅ FIX: Only src folder
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,     // ✅ ADD: Prevents external lib issues
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "typeRoots": ["./node_modules/@types", "./src/types"] // ✅ ADD: Custom types
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": [
-    "src/**/*"           // ✅ FIX: Only source files
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",              // ✅ ADD: Exclude build output
-    "**/*.test.ts"       // ✅ ADD: Exclude test files
+    "dist",
+    "**/*.test.ts",
+    "prisma/seed.ts" // Exclude seed file from TypeScript build
   ]
 }
