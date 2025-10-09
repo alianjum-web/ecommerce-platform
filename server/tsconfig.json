@@ -1,11 +1,27 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
+    "target": "ES2020",
+    "module": "CommonJS",
+    "lib": ["ES2020", "DOM"], // ✅ ADD: For modern JS features
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",       // ✅ FIX: Only src folder
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,     // ✅ ADD: Prevents external lib issues
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"] // ✅ ADD: Custom types
   },
-  "include": ["src/**/*", "prisma/**/*"]
+  "include": [
+    "src/**/*"           // ✅ FIX: Only source files
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",              // ✅ ADD: Exclude build output
+    "**/*.test.ts"       // ✅ ADD: Exclude test files
+  ]
 }
