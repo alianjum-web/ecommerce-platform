@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { getErrorMessage } from "../utils/catchError";
+import { PrismaClient } from "@prisma/client";
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
@@ -272,25 +273,16 @@ const updateOrderStatus = asyncHandler(
 
     return res
       .status(200)
-      .json(new ApiResponse(200, statusUpdated,"stauts updated successfully"));
+      .json(new ApiResponse(200, statusUpdated, "stauts updated successfully"));
   }
 );
 
-const getAllOrdersForAdmin = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
+const getAllOrdersForAdmin = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
+      return res.status(404).json(new ApiResponse(404, "Unauthenticated user"));
     }
 
     const orders = await prisma.order.findMany({
@@ -307,53 +299,55 @@ const getAllOrdersForAdmin = async (
       },
     });
 
-    res.status(200).json(orders);
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Unexpected error occured!",
-    });
-  }
-};
-
-const getOrdersByUserId = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-
-      return;
+    if (!orders || orders.length === 0) {
+      return res.status(404).json(new ApiError(404, "No orders found."));
     }
 
-    const orders = await prisma.order.findMany({
-      where: {
-        userId: userId,
-      },
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          orders,
+          "All orders fetched for the admin sucessfully."
+        )
+      );
+  }
+);
+
+const getOrdersByUserId = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(404).json(new ApiResponse(404, "Unauthenticated user"));
+    }
+    const { orderId } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId, userId: userId },
       include: {
         items: true,
         address: true,
-      },
-      orderBy: {
-        createdAt: "desc",
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
+    if (!order) {
+      return res.status(403).json(new ApiError(403, "No order found."));
+    }
 
-    res.json(orders);
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Unexpected error occured!",
-    });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, order, "Order fetched for the user succesfully")
+      );
   }
-};
+);
 
 export {
   createPaypalOrder,

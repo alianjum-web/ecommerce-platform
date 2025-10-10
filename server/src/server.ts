@@ -11,6 +11,7 @@ import cartRoutes from "./routes/cartRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import { ApiError } from "./utils/ApiError";
+import { errorHandler } from "./middleware/errHandler";
 
 // Load environment variables
 dotenv.config();
@@ -66,35 +67,7 @@ app.get("/", (req, res) => {
   res.send("Hello from E-Commerce backend");
 });
 // ✅ CORRECT: Error handling middleware signature
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  console.error("🔴 GLOBAL_ERROR:", {
-    path: req.path,
-    method: req.method,
-    userId: (req as any).user?.userId,
-    error: error.message,
-    timestamp: new Date().toISOString(),
-  });
-
-  if (error instanceof ApiError) {
-    res
-      .status(error.statusCode)
-      .json(new ApiError(error.statusCode, error.message));
-    return;
-  }
-
-  // Handle Prisma errors
-  if (error.code && error.code.startsWith("P")) {
-    console.error("🔴 PRISMA_ERROR:", error.code);
-    res.status(400).json({
-      success: false,
-      message: "Database error occurred",
-    });
-    return;
-  }
-
-  // Generic error
-  res.status(500).json(new ApiError(500, "Internal server error"));
-});
+app.use(errorHandler);
 
 // 404 Handler for undefined routes
 app.use("*", (req: Request, res: Response) => {

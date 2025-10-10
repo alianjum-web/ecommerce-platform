@@ -3,95 +3,97 @@ import { AuthenticatedRequest } from "../types/express";
 import cloudinary from "../config/cloudinary";
 import { prisma } from "../server";
 import { Prisma } from "@prisma/client";
+import { asyncHandler } from "../utils/asyncHandler";
+import { ApiError, ValidationError } from "../utils/ApiError";
+import { ApiResponse } from "../utils/ApiResponse";
+import { createLogger } from "../utils/logger";
 
-// src/controllers/productController.ts
-const createProduct = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const {
-      name,
-      brand,
-      description,
-      category,
-      gender,
-      sizes,
-      colors,
-      price,
-      stock,
-    } = req.body;
+// TODO: Consider cleaning up uploaded Cloudinary images if DB insert failed (use public_id to delete).
+// Use Promise.allSettled and handle partial failures gracefully.
+const logger = createLogger('PRODUCT_CONTROLLER');
 
-    // Check if files were uploaded
-    if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-      res.status(400).json({ success: false, message: "No images uploaded!" });
-      return;
-    }
-
-    const files = req.files as Express.Multer.File[];
-
-    // ✅ FIXED: Upload from memory buffer instead of file path
-    const uploadPromises = files.map((file) => {
-      return new Promise((resolve, reject) => {
-        // Create upload stream for Cloudinary
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "ecommerce",
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-
-        // ✅ Send the memory buffer directly to Cloudinary
-        uploadStream.end(file.buffer);
-      });
-    });
-
-    const uploadResults = await Promise.all(uploadPromises);
-    const imageUrls = uploadResults.map((result: any) => result.secure_url);
-
-    // Create product in database
-    const newlyCreatedProduct = await prisma.product.create({
-      data: {
+const createProduct = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const {
         name,
         brand,
-        category,
         description,
+        category,
         gender,
-        sizes: Array.isArray(sizes) ? sizes : sizes.split(","),
-        colors: Array.isArray(colors) ? colors : colors.split(","),
-        price: parseFloat(price),
-        stock: parseInt(stock),
-        images: imageUrls,
-        soldCount: 0,
-        rating: 0,
-      },
-    });
+        sizes,
+        colors,
+        price,
+        stock,
+      } = req.body;
 
-    // ✅ REMOVED: No need to clean up files - they were never saved to disk!
+      // ✅ USE SPECIFIC ERROR CLASSES (not direct res.status)
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        throw new ValidationError('No images uploaded'); // ← Better!
+      }
 
-    res.status(201).json({
-      success: true,
-      message: "Product created successfully!",
-      product: newlyCreatedProduct,
-    });
-  } catch (error) {
-    console.error("Error creating product:", error);
+      const files = req.files as Express.Multer.File[];
 
-    // ✅ REMOVED: No file cleanup needed in error handling either
+      // Upload images
+      const uploadFiles = files.map((file) => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "ecommerce" },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(file.buffer);
+        });
+      });
 
-    res.status(500).json({
-      success: false,
-      message: "Error creating product!",
-      error:
-        process.env.NODE_ENV === "development"
-          ? (error as Error)?.message
-          : undefined,
-    });
+      const uploadResults = await Promise.all(uploadFiles);
+      const imageUrls = uploadResults.map((result: any) => result.secure_url);
+
+      // Process sizes and colors safely
+      const processedSizes = Array.isArray(sizes)
+        ? sizes
+        : sizes.split(",").map((s: string) => s.trim());
+
+      const processedColors = Array.isArray(colors)
+        ? colors
+        : colors.split(",").map((c: string) => c.trim());
+
+      // Create product
+      const newlyCreatedProduct = await prisma.product.create({
+        data: {
+          name,
+          brand,
+          description,
+          category,
+          gender,
+          sizes: processedSizes,
+          colors: processedColors,
+          price: parseFloat(price),
+          stock: parseInt(stock),
+          images: imageUrls,
+          soldCount: 0,
+          rating: 0,
+        },
+      });
+
+      // ✅ USE LOGGER FOR SUCCESS TOO
+      logger.info('Product created successfully', { 
+        productId: newlyCreatedProduct.id,
+        productName: name 
+      });
+
+      return res.status(201).json(
+        new ApiResponse(201, newlyCreatedProduct, "Product created successfully.")
+      );
+    } catch (error) {
+      // ✅ USE THE ENHANCED LOGGER METHOD
+      logger.requestError(error as Error, req, 'createProduct');
+      throw error; // ← Let the global error handler process it
+    }
   }
-};
+);
 
 //fetch all products (admin side)
 const fetchAllProductsForAdmin = async (

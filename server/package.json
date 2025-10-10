@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "npm run prisma:generate && tsc", 
+    "build": "npm run prisma:generate && tsc",
     "start": "node dist/src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:seed": "ts-node prisma/seed.ts",
-     "render-build": "npm run prisma:generate && npm run build && npm run prisma:seed"
+    "render-build": "npm run prisma:generate && npm run build && npm run prisma:seed"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -30,6 +30,7 @@
     "lodash": "^4.17.21",
     "nodemailer": "^6.9.16",
     "pino": "^10.0.0",
+    "pino-pretty": "^13.1.2",
     "uuid": "^11.0.5",
     "zod": "^4.1.11"
   },
