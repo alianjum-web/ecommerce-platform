@@ -10,7 +10,7 @@ import { createLogger } from "../utils/logger";
 
 // TODO: Consider cleaning up uploaded Cloudinary images if DB insert failed (use public_id to delete).
 // Use Promise.allSettled and handle partial failures gracefully.
-const logger = createLogger('PRODUCT_CONTROLLER');
+const logger = createLogger("PRODUCT_CONTROLLER");
 
 const createProduct = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -29,7 +29,7 @@ const createProduct = asyncHandler(
 
       // ✅ USE SPECIFIC ERROR CLASSES (not direct res.status)
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        throw new ValidationError('No images uploaded'); // ← Better!
+        throw new ValidationError("No images uploaded"); // ← Better!
       }
 
       const files = req.files as Express.Multer.File[];
@@ -79,17 +79,23 @@ const createProduct = asyncHandler(
       });
 
       // ✅ USE LOGGER FOR SUCCESS TOO
-      logger.info('Product created successfully', { 
+      logger.info("Product created successfully", {
         productId: newlyCreatedProduct.id,
-        productName: name 
+        productName: name,
       });
 
-      return res.status(201).json(
-        new ApiResponse(201, newlyCreatedProduct, "Product created successfully.")
-      );
+      return res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            newlyCreatedProduct,
+            "Product created successfully."
+          )
+        );
     } catch (error) {
       // ✅ USE THE ENHANCED LOGGER METHOD
-      logger.requestError(error as Error, req, 'createProduct');
+      logger.requestError(error as Error, req, "createProduct");
       throw error; // ← Let the global error handler process it
     }
   }
@@ -196,33 +202,31 @@ const deleteProduct = async (
     res.status(500).json({ success: false, message: "Some error occured!" });
   }
 };
-//fetch products with filter (client)
 
-const getProductsForClient = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
+const getProductsForClient = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+
     const categories = ((req.query.categories as string) || "")
       .split(",")
       .filter(Boolean);
-    const brands = ((req.query.brands as string) || "")
+    const colors = ((req.query.colors as string) || "")
       .split(",")
       .filter(Boolean);
     const sizes = ((req.query.sizes as string) || "")
       .split(",")
       .filter(Boolean);
-    const colors = ((req.query.colors as string) || "")
+    const brands = ((req.query.brands as string) || "")
       .split(",")
       .filter(Boolean);
 
     const minPrice = parseFloat(req.query.minPrice as string) || 0;
     const maxPrice =
       parseFloat(req.query.maxPrice as string) || Number.MAX_SAFE_INTEGER;
+
     const sortBy = (req.query.sortBy as string) || "createdAt";
-    const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
+    const sortOrder = (req.query.sortOrderas as "asc" | "desc") || "desc";
 
     const skip = (page - 1) * limit;
 
@@ -283,18 +287,20 @@ const getProductsForClient = async (
       "Math.ceil(total / limit)"
     );
 
-    res.status(200).json({
-      success: true,
-      products,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalProducts: total,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Some error occured!" });
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          products,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalProducts: total,
+        },
+        "Products fetched for the clients successfully.."
+      )
+    );
   }
-};
+);
 
 export {
   createProduct,
