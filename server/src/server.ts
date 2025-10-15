@@ -19,7 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const corsOptions: cors.CorsOptions = {
-  origin: function (origin, callback) {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // Allow requests with no origin (mobile apps, Postman, server-to-server)
     if (!origin) {
       console.log("🌐 CORS: Allowing request with no origin");
@@ -44,9 +44,8 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-  optionsSuccessStatus: 200 // For legacy browser support
+  optionsSuccessStatus: 200
 };
-
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -63,10 +62,11 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/order", orderRoutes);
 
-app.get("/", (req, res) => {
+app.get("/", (req: Request, res: Response) => {
   res.send("Hello from E-Commerce backend");
 });
-// ✅ CORRECT: Error handling middleware signature
+
+// Error handling middleware
 app.use(errorHandler);
 
 // 404 Handler for undefined routes

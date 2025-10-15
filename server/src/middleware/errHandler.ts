@@ -1,25 +1,26 @@
-// middleware/errorHandler.ts
 import { createLogger } from '../utils/logger';
 import { ApiError, ValidationError, InternalServerError, NotFoundError } from '../utils/ApiError';
-import { NextFunction, Response } from 'express';
+import { NextFunction, Response, Request } from 'express';
 import { AuthenticatedRequest } from '../types/express';
 
 const errorLogger = createLogger('ERROR_HANDLER');
 
 export const errorHandler = (
   error: any,
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  const authReq = req as AuthenticatedRequest;
+  
   // ✅ LOG WITH STRUCTURED CONTEXT
   errorLogger.error(error, {
     path: req.path,
     method: req.method,
-    userId: (req as any).user?.userId,
+    userId: authReq.user?.userId,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
-    body: process.env.NODE_ENV === 'development' ? req.body : undefined, // Only in dev
+    body: process.env.NODE_ENV === 'development' ? req.body : undefined,
     query: process.env.NODE_ENV === 'development' ? req.query : undefined,
   });
 
@@ -59,7 +60,7 @@ export const errorHandler = (
   res.status(processedError.statusCode).json({
     success: false,
     message: processedError.message,
-    errors: processedError.errors,
+    errors: processedError.errors || [],
     ...(process.env.NODE_ENV === 'development' && {
       stack: processedError.stack,
       originalError: error.message

@@ -1,4 +1,3 @@
-// src/utils/ApiError.ts
 export class ApiError extends Error {
   public statusCode: number;
   public data: null;
@@ -19,14 +18,14 @@ export class ApiError extends Error {
     this.message = message;
     this.success = false;
     this.errors = errors;
-    this.isOperational = isOperational; // ✅ NEW: Distinguish operational vs programmer errors
+    this.isOperational = isOperational;
 
     if (stack) {
       this.stack = stack;
     } else if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     } else {
-      this.stack = new Error().stack;
+      this.stack = new Error().stack || '';
     }
   }
 }
@@ -52,6 +51,6 @@ export class UnauthorizedError extends ApiError {
 
 export class InternalServerError extends ApiError {
   constructor(message: string = "Internal server error") {
-    super(500, message, [], false); // ❌ Non-operational (programmer error)
+    super(500, message, [], false);
   }
 }

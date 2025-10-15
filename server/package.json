@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "npm run prisma:generate && tsc",
+    "build": "npm run prisma:generate && tsc --skipLibCheck",
     "start": "node dist/src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
