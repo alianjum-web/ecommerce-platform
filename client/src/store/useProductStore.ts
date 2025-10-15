@@ -1,22 +1,8 @@
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
+import type { Product } from "@/types/product";
 
-export interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  description: string;
-  gender: string;
-  sizes: string[];
-  colors: string[];
-  price: number;
-  stock: number;
-  rating?: number;
-  soldCount: number;
-  images: string[];
-}
 
 interface ProductState {
   products: Product[];

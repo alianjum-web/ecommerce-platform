@@ -52,17 +52,19 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         orderData,
         { withCredentials: true }
       );
+
       set({
         isLoading: false,
-        currentOrder: response.data,
         isPaymentProcessing: false,
+        currentOrder: response.data,
       });
+
       return response.data;
     } catch (error) {
       set({
-        error: "Failed to capture paypal order",
         isLoading: false,
         isPaymentProcessing: false,
+        error: "Failed to create the final order with the order data.",
       });
       return null;
     }
@@ -94,8 +96,10 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         ),
       }));
       return true;
-    } catch (error) {
-      set({ error: "Failed to capture paypal order", isLoading: false });
+    } catch (err: any) {
+      const message =
+        err.response.data.message ??  "Failed to update the order status of product";
+      set({ error: message, isLoading: false });
       return false;
     }
   },
