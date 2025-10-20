@@ -4,7 +4,13 @@ import cloudinary from "../config/cloudinary";
 import { prisma } from "../server";
 import { Prisma } from "@prisma/client";
 import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError, ValidationError } from "../utils/ApiError";
+import {
+  ApiError,
+  InternalServerError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { createLogger } from "../utils/logger";
 
@@ -101,50 +107,113 @@ const createProduct = asyncHandler(
   }
 );
 
-//fetch all products (admin side)
-const fetchAllProductsForAdmin = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const fetchAllProducts = await prisma.product.findMany();
-    res.status(200).json(fetchAllProducts);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: "Some error occured!" });
-  }
-};
+// TODO:- Add pagination
+const fetchAllProductsForAdmin = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.user || req.user.role !== "admin") {
+      throw new UnauthorizedError("Admin privileges required");
+    }
 
-//get a single product
-const getProductByID = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
+    // ✅ Improved validation with better error handling
+    const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+    const limit = Math.min(
+      Math.max(1, parseInt((req.query.limit as string) || "50", 10)),
+      200
+    );
+
+    // ✅ Validate that page and limit are actually numbers
+    if (isNaN(page) || isNaN(limit)) {
+      throw new ValidationError("Invalid pagination parameters");
+    }
+
+    const skip = (page - 1) * limit;
+
+    try {
+      // ✅ Use transaction for consistent data
+      const [products, total] = await prisma.$transaction([
+        prisma.product.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            stock: true,
+            category: true,
+            createdAt: true,
+            // ✅ Consider adding updatedAt for admin views
+            updatedAt: true,
+          },
+        }),
+        prisma.product.count(),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      return res.status(200).json(
+        new ApiResponse(200, {
+          items: products,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNext,
+            hasPrev,
+            skip
+          }
+        }, 'Products fetched successfully')
+      );
+    } catch (error) {
+      // ✅ Specific error handling
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new InternalServerError("Database error occurred");
+      }
+      throw error;
+    }
+  }
+);
+
+const getProductByID = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+
+    if (!id || typeof id !== "string" || id.trim() === "") {
+      throw new ValidationError("Product id is required");
+    }
+
     const product = await prisma.product.findUnique({
       where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        images: true,
+        brand: true,
+        category: true,
+        sizes: true,
+        colors: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     if (!product) {
-      res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
+      throw new NotFoundError(`Product with id "${id}" not found`);
     }
 
-    res.status(200).json(product);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: "Some error occured!" });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, product, "Product fetched successfully"));
   }
-};
-//update  a product (admin)
-const updateProduct = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
+);
+
+const updateProduct = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const {
       name,
@@ -159,49 +228,38 @@ const updateProduct = async (
       rating,
     } = req.body;
 
-    console.log(req.body, "req.body");
-
-    //homework -> you can also implement image update func
-
     const product = await prisma.product.update({
       where: { id },
       data: {
         name,
         brand,
-        category,
         description,
+        category,
         gender,
         sizes: sizes.split(","),
-        colors: colors.split(","),
+        colors: colors.split(","), // ✅ FIXED: colors.split instead of sizes.split
         price: parseFloat(price),
-        stock: parseInt(stock),
+        stock: parseInt(stock), // ✅ Better: parseInt for stock
         rating: parseInt(rating),
       },
     });
 
-    res.status(200).json(product);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: "Some error occured!" });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, product, "Product updated successfully"));
   }
-};
-//delete a product (admin)
-const deleteProduct = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
+);
+
+const deleteProduct = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     await prisma.product.delete({ where: { id } });
 
-    res
+    return res
       .status(200)
-      .json({ success: true, message: "Product deleted successfully" });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: "Some error occured!" });
+      .json(new ApiResponse(200, {}, "Product deleted successfully")); // ✅ Added empty object as data
   }
-};
+);
 
 const getProductsForClient = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {

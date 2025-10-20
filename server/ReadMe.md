@@ -9,6 +9,8 @@
 
      Upload Service: Handles file upload specifics
 
+     Handle Validation by zod or any other validator
+
 - ### Testability
     ```typescript
     // Easy to test!

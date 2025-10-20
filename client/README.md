@@ -110,3 +110,6 @@ const useApi = () => {
 
 ✅ Consistent response structure
 
+
+# TODO
+- Handle the pagination from the server for the controller fetchAllProductsForAdmin
