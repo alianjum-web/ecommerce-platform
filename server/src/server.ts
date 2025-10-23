@@ -19,35 +19,39 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const corsOptions: cors.CorsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  origin: function (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) {
     // Allow requests with no origin (mobile apps, Postman, server-to-server)
     if (!origin) {
       console.log("🌐 CORS: Allowing request with no origin");
       return callback(null, true);
     }
-    
+
     const allowedOrigins = [
       "https://ecommerce-platform-with-prisma.vercel.app",
-      "http://localhost:3000", 
+      "http://localhost:3000",
       "http://localhost:3001",
     ];
-    
+
     if (allowedOrigins.includes(origin)) {
       console.log("✅ CORS: Allowed origin:", origin);
       callback(null, true);
     } else {
       console.log("🚫 CORS Blocked origin:", origin);
       console.log("📋 Allowed origins:", allowedOrigins);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
+      return callback(null, false);
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
