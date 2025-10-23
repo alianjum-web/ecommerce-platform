@@ -6,19 +6,31 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "npx prisma generate && tsc --skipLibCheck",
+    "build": "npx prisma generate --schema=src/prisma/schema.prisma && tsc --skipLibCheck",
     "start": "node dist/server.js",
-    "prisma:generate": "npx prisma generate",
-    "prisma:migrate:dev": "npx prisma migrate dev --name init",
-    "prisma:migrate:deploy": "npx prisma migrate deploy",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "render-build": "npm run prisma:generate && npm run build && npx prisma migrate deploy"
+    "prisma:generate": "npx prisma generate --schema=src/prisma/schema.prisma",
+    "prisma:migrate:dev": "npx prisma migrate dev --schema=src/prisma/schema.prisma --name init",
+    "prisma:migrate:deploy": "npx prisma migrate deploy --schema=src/prisma/schema.prisma",
+    "prisma:seed": "ts-node src/prisma/seed.ts",
+    "render-build": "npm ci --include=dev && npx prisma generate --schema=src/prisma/schema.prisma && npm run build && npx prisma migrate deploy --schema=src/prisma/schema.prisma"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node src/prisma/seed.ts",
+    "schema": "src/prisma/schema.prisma"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.3",
+    "@prisma/client": "^6.18.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/lodash": "^4.17.14",
+    "@types/multer": "^1.4.13",
+    "@types/node": "^22.18.12",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pino": "^7.0.4",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
@@ -33,24 +45,12 @@
     "nodemailer": "^7.0.10",
     "pino": "^10.0.0",
     "pino-pretty": "^13.1.2",
-    "prisma": "^6.16.3",
     "uuid": "^11.0.5",
-    "zod": "^4.1.11",
-
-    "@types/cookie-parser": "^1.4.9",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/lodash": "^4.17.14",
-    "@types/multer": "^1.4.13",
-    "@types/node": "^22.18.12",
-    "@types/nodemailer": "^6.4.17",
-    "@types/pino": "^7.0.4",
-    "@types/uuid": "^10.0.0",
-    "@types/bcryptjs": "^2.4.6"
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
+    "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
