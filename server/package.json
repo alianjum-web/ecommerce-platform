@@ -9,9 +9,10 @@
     "build": "npm run prisma:generate && tsc --skipLibCheck",
     "start": "node dist/src/server.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:migrate:dev": "prisma migrate dev --name init",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "render-build": "npm run prisma:generate && npm run build && npm run prisma:seed"
+    "render-build": "npm run prisma:generate && npm run build && npx prisma migrate deploy"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
