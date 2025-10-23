@@ -7,7 +7,7 @@
     "dev": "nodemon src/server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "npx prisma generate && tsc --skipLibCheck",
-    "start": "node dist/src/server.js",
+    "start": "node dist/server.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate:dev": "npx prisma migrate dev --name init",
     "prisma:migrate:deploy": "npx prisma migrate deploy",
