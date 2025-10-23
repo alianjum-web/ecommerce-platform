@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { AdminOrder, useOrderStore } from "@/store/useOrderStore";
+import {  useOrderStore } from "@/store/useOrderStore";
 import { useEffect } from "react";
 
 type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED";
