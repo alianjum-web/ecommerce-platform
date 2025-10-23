@@ -8,11 +8,11 @@
     "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "npm run prisma:generate && tsc --skipLibCheck",
     "start": "node dist/src/server.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate:dev": "prisma migrate dev --name init",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "render-build": "npm run prisma:generate && npm run build && npx prisma migrate deploy"
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate:dev": "npx prisma migrate dev --name init",
+    "prisma:migrate:deploy": "npx prisma migrate deploy",
+    "prisma:seed": "npx ts-node prisma/seed.ts",
+    "render-build": "npx prisma generate && npm run build && npx prisma migrate deploy"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
