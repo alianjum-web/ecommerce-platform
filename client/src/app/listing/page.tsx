@@ -272,7 +272,7 @@ function ProductListingPage() {
               <div>Error: {error}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {products.map((productItem) => (
+                {products ? ( products.map((productItem) => (
                   <div
                     onClick={() => router.push(`/listing/${productItem.id}`)}
                     key={productItem.id}
@@ -306,7 +306,7 @@ function ProductListingPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))) : <p>It is empty</p>}
               </div>
             )}
 

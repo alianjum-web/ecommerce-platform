@@ -32,7 +32,7 @@ const corsOptions: cors.CorsOptions = {
     const allowedOrigins = [
       "https://ecommerce-platform-with-prisma.vercel.app",
       "http://localhost:3000",
-      "http://localhost:3001",
+      "http://localhost:3012",
     ];
 
     if (allowedOrigins.includes(origin)) {

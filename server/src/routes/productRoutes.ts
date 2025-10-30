@@ -27,7 +27,7 @@ router.get(
   fetchAllProductsForAdmin
 );
 
-router.get("/fetch-client-products", authenticateJwt, getProductsForClient);
+router.get("/fetch-client-products", getProductsForClient);
 router.get("/:id", authenticateJwt, getProductByID);
 router.put("/:id", authenticateJwt, isSuperAdmin, updateProduct);
 router.delete("/:id", authenticateJwt, isSuperAdmin, deleteProduct);
