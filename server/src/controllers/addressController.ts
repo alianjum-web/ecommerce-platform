@@ -6,7 +6,8 @@ const createAddress = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
-  const userId = req.user?.userId;
+ const rawUserId = req.user?.userId;
+  const userId = typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
   if (!userId) {
     res.status(401).json({
       success: false,
@@ -59,7 +60,8 @@ const getAddresses = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.user?.userId;
+ const rawUserId = req.user?.userId;
+  const userId = typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -91,7 +93,8 @@ const updateAddress = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.user?.userId;
+ const rawUserId = req.user?.userId;
+  const userId = typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
     const { id } = req.params;
     if (!userId) {
       res.status(401).json({
@@ -158,7 +161,8 @@ const deleteAddress = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.user?.userId;
+ const rawUserId = req.user?.userId;
+  const userId = typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
     if (!userId) {
       res.status(401).json({
         success: false,

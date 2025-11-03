@@ -43,36 +43,6 @@
 //       CLOUDINARY_API_SECRET: string;
 //       ACCESS_TOKEN_SECRET: string;
 //       ACCESS_TOKEN_EXPIRY: string;
-//       REFRESH_TOKEN_SECRET: string;
-//       REFRESH_TOKEN_EXPIRY: string;
-//       PAYPAL_CLIENT_ID: string;
-//       PAYPAL_CLIENT_SECRET: string;
-//       PAYPAL_MODE: string;
-//       STRIPE_SECRET_KEY: string;
-//       STRIPE_WEBHOOK_SECRET: string;
-//       SMTP_HOST: string;
-//       SMTP_PORT: string;
-//       SMTP_USER: string;
-//       SMTP_PASS: string;
-//       EMAIL_FROM: string;
-//       LOG_ENABLED: string;
-//       LOG_LEVEL: string;
-//     }
-//   }
-// }
-
-// export interface AuthenticatedRequest extends Request {
-//   user?: {
-//     userId: string;
-//     email: string;
-//     role?: string;
-//   };
-//   validatedData?: any;
-// }
-
-// // Don't re-export Express types here - they're already available from 'express'
-
-
 import { Request } from 'express';
 
 // Properly extend Express Request type globally
@@ -81,7 +51,7 @@ declare global {
     interface Request {
       validatedData?: any;
       user?: {
-        userId: string;
+        userId: number;
         email: string;
         role?: string;
       };
@@ -141,7 +111,7 @@ export interface AuthenticatedRequest<
   ReqQuery = any
 > extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: {
-    userId: string;
+    userId: number;
     email: string;
     role?: string;
   };

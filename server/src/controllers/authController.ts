@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
-function generateToken(userId: string, email: string, role: string) {
+function generateToken(userId: number, email: string, role: string) {
   const accessToken = jwt.sign(
     {
       userId,
