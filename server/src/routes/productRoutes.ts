@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateJwt, isSuperAdmin } from "../middleware/authMiddleware";
-import { uploadMultiple } from "../middleware/uploadMiddleware"; // ← Import the specific one
+import { uploadMultiple, uploadSingle } from "../middleware/uploadMiddleware"; // ← Import the specific one
 import {
   createProduct,
   deleteProduct,
@@ -16,7 +16,7 @@ router.post(
   "/create-new-product",
   authenticateJwt,
   isSuperAdmin,
-  uploadMultiple, // ✅ Use the pre-configured one
+  uploadMultiple, 
   createProduct
 );
 
@@ -31,5 +31,15 @@ router.get("/fetch-client-products", getProductsForClient);
 router.get("/:id", authenticateJwt, getProductByID);
 router.put("/:id", authenticateJwt, isSuperAdmin, updateProduct);
 router.delete("/:id", authenticateJwt, isSuperAdmin, deleteProduct);
+import { upload } from "../middleware/uploadMiddleware"; // the upload object
+
+router.post('/debug-multer', authenticateJwt, isSuperAdmin, upload.any(), (req, res) => {
+  res.json({
+    contentType: req.headers['content-type'],
+    filesInfo: Array.isArray(req.files) ? req.files.map(f => ({ fieldname: f.fieldname, originalname: f.originalname, mimetype: f.mimetype, size: f.size })) : req.files,
+    bodyKeys: Object.keys(req.body || {}),
+    body: req.body
+  });
+});
 
 export default router;

@@ -1,9 +1,15 @@
-import { createLogger } from '../utils/logger';
-import { ApiError, ValidationError, InternalServerError, NotFoundError } from '../utils/ApiError';
-import { NextFunction, Response, Request } from 'express';
-import { AuthenticatedRequest } from '../types/express';
+import { NextFunction, Request, Response } from "express";
+import multer from "multer";
+import { createLogger } from "../utils/logger";
+import {
+  ApiError,
+  ValidationError,
+  InternalServerError,
+  NotFoundError,
+} from "../utils/ApiError";
+import { AuthenticatedRequest } from "../types/express";
 
-const errorLogger = createLogger('ERROR_HANDLER');
+const errorLogger = createLogger("ERROR_HANDLER");
 
 export const errorHandler = (
   error: any,
@@ -12,58 +18,88 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   const authReq = req as AuthenticatedRequest;
-  
-  // ✅ LOG WITH STRUCTURED CONTEXT
-  errorLogger.error(error, {
-    path: req.path,
-    method: req.method,
-    userId: authReq.user?.userId,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    body: process.env.NODE_ENV === 'development' ? req.body : undefined,
-    query: process.env.NODE_ENV === 'development' ? req.query : undefined,
-  });
 
-  let processedError = error;
+  // structured log. Be defensive: properties may be undefined
+  try {
+    errorLogger.error(error, {
+      path: req.path,
+      method: req.method,
+      userId: authReq.user?.userId ?? null,
+      ip: req.ip,
+      userAgent: req.get("User-Agent") ?? null,
+      body: process.env.NODE_ENV === "development" ? req.body : undefined,
+      query: process.env.NODE_ENV === "development" ? req.query : undefined,
+    });
+  } catch (logErr) {
+    // if logging fails, don't crash the handler
+    console.error("Error while logging error:", logErr);
+  }
 
-  // ✅ HANDLE SPECIFIC ERROR TYPES
-  if (error.name === 'ValidationError') {
-    processedError = new ValidationError('Input validation failed');
-  } else if (error.name === 'CastError') {
-    processedError = new NotFoundError('Resource not found');
-  } else if (error.code === 'LIMIT_FILE_SIZE') {
-    processedError = new ValidationError('File too large');
-  } 
-  // ✅ HANDLE PRISMA ERRORS
-  else if (error.code && error.code.startsWith('P')) {
-    errorLogger.warn('Database operation failed', { prismaCode: error.code });
-    
+  let processedError: ApiError | null = null;
+
+  // 1) Multer errors (file upload related)
+  if (error instanceof multer.MulterError) {
     switch (error.code) {
-      case 'P2002':
-        processedError = new ValidationError('Duplicate field value');
+      case "LIMIT_UNEXPECTED_FILE":
+        processedError = new ValidationError(
+          "Unexpected file field. Check your form-data keys."
+        );
         break;
-      case 'P2025':
-        processedError = new NotFoundError('Record not found');
+      case "LIMIT_FILE_SIZE":
+        processedError = new ValidationError("File too large");
         break;
+      case "LIMIT_PART_COUNT":
+      case "LIMIT_FILE_COUNT":
+      case "LIMIT_FIELD_KEY":
+      case "LIMIT_FIELD_VALUE":
       default:
-        processedError = new ApiError(400, 'Database operation failed');
+        processedError = new ValidationError(error.message || "File upload error");
     }
   }
-  // ✅ ENSURE IT'S AN ApiError
-  else if (!(error instanceof ApiError)) {
-    processedError = new InternalServerError(
-      process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    );
+  // 2) Known error shapes
+  else if (error && error.name === "ValidationError") {
+    processedError = new ValidationError(error.message || "Input validation failed");
+  } else if (error && error.name === "CastError") {
+    processedError = new NotFoundError(error.message || "Resource not found");
+  } else if (error && error.code && typeof error.code === "string" && error.code.startsWith("P")) {
+    // Prisma errors
+    switch (error.code) {
+      case "P2002":
+        processedError = new ValidationError("Duplicate field value");
+        break;
+      case "P2025":
+        processedError = new NotFoundError("Record not found");
+        break;
+      default:
+        processedError = new ApiError(400, "Database operation failed");
+    }
   }
 
-  // ✅ SEND RESPONSE
-  res.status(processedError.statusCode).json({
+  // 3) If the error is already an ApiError subclass, use it
+  if (!processedError) {
+    if (error instanceof ApiError) {
+      processedError = error;
+    } else {
+      // fallback: wrap into InternalServerError (do not expose raw message in prod)
+      const message =
+        process.env.NODE_ENV === "development" && error && error.message
+          ? String(error.message)
+          : "Internal server error";
+      processedError = new InternalServerError(message);
+    }
+  }
+
+  // compose response payload
+  const payload: any = {
     success: false,
     message: processedError.message,
     errors: processedError.errors || [],
-    ...(process.env.NODE_ENV === 'development' && {
-      stack: processedError.stack,
-      originalError: error.message
-    })
-  });
+  };
+
+  if (process.env.NODE_ENV === "development") {
+    payload.stack = processedError.stack;
+    payload.originalError = error && error.message ? String(error.message) : undefined;
+  }
+
+  res.status(processedError.statusCode || 500).json(payload);
 };

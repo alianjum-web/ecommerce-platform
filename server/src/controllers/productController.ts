@@ -11,6 +11,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../utils/ApiError";
+import { parseMaybeArray } from "../utils/parsedArray";
 import { ApiResponse } from "../utils/ApiResponse";
 import { createLogger } from "../utils/logger";
 
@@ -21,6 +22,8 @@ const logger = createLogger("PRODUCT_CONTROLLER");
 const createProduct = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
+console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f => f.originalname) : req.files)
+
       const {
         name,
         brand,
@@ -33,40 +36,53 @@ const createProduct = asyncHandler(
         stock,
       } = req.body;
 
-      // ✅ USE SPECIFIC ERROR CLASSES (not direct res.status)
-      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        throw new ValidationError("No images uploaded"); // ← Better!
+      if (!name || !brand || !category || price === undefined || stock === undefined) {
+        throw new ValidationError("Missing required fields: name, brand, category, price, stock");
       }
 
-      const files = req.files as Express.Multer.File[];
+      // accept images either from multer or from a provided URL field
+      let files: Express.Multer.File[] = [];
+      if (req.files && Array.isArray(req.files) && (req.files as any[]).length > 0) {
+        files = req.files as Express.Multer.File[];
+      }
 
-      // Upload images
-      const uploadFiles = files.map((file) => {
-        return new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "ecommerce" },
-            (error, result) => {
-              if (error) reject(error);
+      // if no files, but client provided image URLs as 'image' or 'images' in body, accept them
+      const fallbackImageUrls: string[] = [];
+      if (files.length === 0) {
+        if (req.body.image) fallbackImageUrls.push(req.body.image);
+        if (req.body.images && Array.isArray(req.body.images)) fallbackImageUrls.push(...req.body.images);
+      }
+
+      if (files.length === 0 && fallbackImageUrls.length === 0) {
+        throw new ValidationError("No images uploaded");
+      }
+
+      let imageUrls: string[] = [];
+      if (files.length > 0) {
+        const uploadFiles = files.map((file) => {
+          return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream({ folder: 'ecommerce' }, (err, result) => {
+              if (err) reject(err);
               else resolve(result);
-            }
-          );
-          uploadStream.end(file.buffer);
+            });
+            uploadStream.end(file.buffer);
+          });
         });
-      });
+        const uploadResults = await Promise.all(uploadFiles);
+        imageUrls = uploadResults.map((r: any) => r.secure_url);
+      } else {
+        imageUrls = fallbackImageUrls;
+      }
 
-      const uploadResults = await Promise.all(uploadFiles);
-      const imageUrls = uploadResults.map((result: any) => result.secure_url);
+      const processedSizes = parseMaybeArray(sizes);
+      const processedColors = parseMaybeArray(colors);
 
-      // Process sizes and colors safely
-      const processedSizes = Array.isArray(sizes)
-        ? sizes
-        : sizes.split(",").map((s: string) => s.trim());
+      const parsedPrice = typeof price === 'number' ? price : Number(price);
+      const parsedStock = typeof stock === 'number' ? stock : Number(stock);
+      if (Number.isNaN(parsedPrice) || Number.isNaN(parsedStock)) {
+        throw new ValidationError("price and stock must be numeric");
+      }
 
-      const processedColors = Array.isArray(colors)
-        ? colors
-        : colors.split(",").map((c: string) => c.trim());
-
-      // Create product
       const newlyCreatedProduct = await prisma.product.create({
         data: {
           name,
@@ -76,36 +92,23 @@ const createProduct = asyncHandler(
           gender,
           sizes: processedSizes,
           colors: processedColors,
-          price: parseFloat(price),
-          stock: parseInt(stock),
+          price: parsedPrice,
+          stock: parsedStock,
           images: imageUrls,
           soldCount: 0,
           rating: 0,
         },
       });
 
-      // ✅ USE LOGGER FOR SUCCESS TOO
-      logger.info("Product created successfully", {
-        productId: newlyCreatedProduct.id,
-        productName: name,
-      });
-
-      return res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            newlyCreatedProduct,
-            "Product created successfully."
-          )
-        );
+      logger.info('Product created successfully', { productId: newlyCreatedProduct.id, productName: name });
+      return res.status(201).json(new ApiResponse(201, newlyCreatedProduct, 'Product created successfully.'));
     } catch (error) {
-      // ✅ USE THE ENHANCED LOGGER METHOD
-      logger.requestError(error as Error, req, "createProduct");
-      throw error; // ← Let the global error handler process it
+      logger.requestError(error as Error, req, 'createProduct');
+      throw error;
     }
   }
 );
+
 
 // TODO:- Add pagination
 const fetchAllProductsForAdmin = asyncHandler(
@@ -154,18 +157,22 @@ const fetchAllProductsForAdmin = asyncHandler(
       const hasPrev = page > 1;
 
       return res.status(200).json(
-        new ApiResponse(200, {
-          items: products,
-          meta: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNext,
-            hasPrev,
-            skip
-          }
-        }, 'Products fetched successfully')
+        new ApiResponse(
+          200,
+          {
+            items: products,
+            meta: {
+              page,
+              limit,
+              total,
+              totalPages,
+              hasNext,
+              hasPrev,
+              skip,
+            },
+          },
+          "Products fetched successfully"
+        )
       );
     } catch (error) {
       // ✅ Specific error handling
