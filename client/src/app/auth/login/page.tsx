@@ -77,6 +77,7 @@ function LoginPage() {
                 name="email"
                 type="email"
                 className="bg-[#ffede1]"
+                autoComplete="email"
                 placeholder="Enter your email"
                 required
                 value={formData.email}
@@ -90,6 +91,7 @@ function LoginPage() {
                 name="password"
                 type="password"
                 className="bg-[#ffede1]"
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 required
                 value={formData.password}
