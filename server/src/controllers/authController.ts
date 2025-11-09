@@ -1,21 +1,20 @@
+// auth.controller.ts (suggested)
 import { prisma } from "../server";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
-function generateToken(userId: number, email: string, role: string) {
-  const accessToken = jwt.sign(
-    {
-      userId,
-      email,
-      role,
-    },
-    process.env.JWT_SECRET!,
-    { expiresIn: "60m" }
-  );
-  const refreshToken = uuidv4();
-  return { accessToken, refreshToken };
+function signAccessToken(userId: number, email: string, role: string) {
+  return jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
+    expiresIn: "60m",
+  });
+}
+
+// hash refresh token before storing (so DB safe)
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 async function setTokens(
@@ -23,17 +22,24 @@ async function setTokens(
   accessToken: string,
   refreshToken: string
 ) {
+  // For cross-site (frontend <> api on different origins) use sameSite: "none" and secure:true in prod
+  const isProd = process.env.NODE_ENV === "production";
+
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 1000,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax", // in prod: none, in dev lax is okay
+    maxAge: 60 * 60 * 1000, // 1 hour in ms
+    path: "/",
   });
+
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    // 7 days -> ms
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
   });
 }
 
@@ -72,31 +78,34 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
 const login = async (req: Request, res: Response): Promise<void> => {
   try {
-
     const { email, password } = req.body;
-    const extractCurrentUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const extractCurrentUser = await prisma.user.findUnique({ where: { email } });
 
     if (
       !extractCurrentUser ||
       !(await bcrypt.compare(password, extractCurrentUser.password))
     ) {
-      res.status(401).json({
-        success: false,
-        error: "Invalied credentials",
-      });
-
+      res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
     }
-    //create our access and refreshtoken
-    const { accessToken, refreshToken } = generateToken(
+
+    const accessToken = signAccessToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
-    //set out tokens
+
+    const refreshToken = uuidv4();
+    const hashed = hashToken(refreshToken);
+
+    // store hashed refresh token in DB (replace previous token)
+    await prisma.user.update({
+      where: { id: extractCurrentUser.id },
+      data: { refreshToken: hashed }, // ensure your prisma schema has refreshToken?: string | null
+    });
+
     await setTokens(res, accessToken, refreshToken);
+
     res.status(200).json({
       success: true,
       message: "Login successfully",
@@ -113,49 +122,33 @@ const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const refreshAccessToken = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) {
-    res.status(401).json({
-      success: false,
-      error: "Invalid refresh token",
-    });
-  }
 
+// POST /refresh-token
+const refreshTokenController = async (req: Request, res: Response) => {
   try {
-    const user = await prisma.user.findFirst({
-      where: {
-        refreshToken: refreshToken,
-      },
-    });
+    const token = req.cookies?.refreshToken;
+    if (!token) return res.status(401).json({ success: false });
 
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: "User not found",
-      });
-      return;
-    }
+    const hashed = hashToken(token);
+    const user = await prisma.user.findFirst({ where: { refreshToken: hashed } });
+    if (!user) return res.status(401).json({ success: false });
 
-    const { accessToken, refreshToken: newRefreshToken } = generateToken(
-      user.id,
-      user.email,
-      user.role
-    );
-    //set out tokens
+    // rotate tokens: new access token, optionally new refresh token
+    const accessToken = signAccessToken(user.id, user.email, user.role);
+    const newRefreshToken = uuidv4();
+    const newHashed = hashToken(newRefreshToken);
+
+    await prisma.user.update({ where: { id: user.id }, data: { refreshToken: newHashed } });
+
     await setTokens(res, accessToken, newRefreshToken);
-    res.status(200).json({
-      success: true,
-      message: "Refresh token refreshed successfully",
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Refresh token error" });
+
+    return res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
   }
 };
+
 
 const logout = async (req: Request, res: Response): Promise<void> => {
   res.clearCookie("accessToken");
@@ -169,6 +162,6 @@ const logout = async (req: Request, res: Response): Promise<void> => {
 export {
   register,
   login,
-  refreshAccessToken,
+  refreshTokenController,
   logout
 }
