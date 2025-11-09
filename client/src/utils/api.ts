@@ -1,7 +1,7 @@
 // lib/api-config.ts
 export const API_BASE_URL = process.env.NODE_ENV === 'development' 
   ? 'http://localhost:4001/api'  // Development
-  : process.env.NEXT_PUBLIC_API_URL; // Production
+  : `${process.env.NEXT_PUBLIC_API_URL}/api`; // Production
 
 export const API_ROUTES = {
   AUTH: `${API_BASE_URL}/auth`,

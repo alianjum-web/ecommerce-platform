@@ -22,7 +22,18 @@ const logger = createLogger("PRODUCT_CONTROLLER");
 const createProduct = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f => f.originalname) : req.files)
+      console.log("MULTER REQ.FILES type:", typeof req.files);
+      console.log("isArray(req.files):", Array.isArray(req.files));
+      console.log(
+        "req.files length/name(s):",
+        Array.isArray(req.files)
+          ? (req.files as Express.Multer.File[]).map((f) => ({
+              name: f.originalname,
+              size: f.size,
+            }))
+          : req.files
+      );
+      console.log("req.body images keys:", req.body.image, req.body.images);
 
       const {
         name,
@@ -36,13 +47,25 @@ console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f =
         stock,
       } = req.body;
 
-      if (!name || !brand || !category || price === undefined || stock === undefined) {
-        throw new ValidationError("Missing required fields: name, brand, category, price, stock");
+      if (
+        !name ||
+        !brand ||
+        !category ||
+        price === undefined ||
+        stock === undefined
+      ) {
+        throw new ValidationError(
+          "Missing required fields: name, brand, category, price, stock"
+        );
       }
 
       // accept images either from multer or from a provided URL field
       let files: Express.Multer.File[] = [];
-      if (req.files && Array.isArray(req.files) && (req.files as any[]).length > 0) {
+      if (
+        req.files &&
+        Array.isArray(req.files) &&
+        (req.files as any[]).length > 0
+      ) {
         files = req.files as Express.Multer.File[];
       }
 
@@ -50,7 +73,8 @@ console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f =
       const fallbackImageUrls: string[] = [];
       if (files.length === 0) {
         if (req.body.image) fallbackImageUrls.push(req.body.image);
-        if (req.body.images && Array.isArray(req.body.images)) fallbackImageUrls.push(...req.body.images);
+        if (req.body.images && Array.isArray(req.body.images))
+          fallbackImageUrls.push(...req.body.images);
       }
 
       if (files.length === 0 && fallbackImageUrls.length === 0) {
@@ -61,10 +85,13 @@ console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f =
       if (files.length > 0) {
         const uploadFiles = files.map((file) => {
           return new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream({ folder: 'ecommerce' }, (err, result) => {
-              if (err) reject(err);
-              else resolve(result);
-            });
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "ecommerce-prisma/products" },
+              (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+              }
+            );
             uploadStream.end(file.buffer);
           });
         });
@@ -77,8 +104,8 @@ console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f =
       const processedSizes = parseMaybeArray(sizes);
       const processedColors = parseMaybeArray(colors);
 
-      const parsedPrice = typeof price === 'number' ? price : Number(price);
-      const parsedStock = typeof stock === 'number' ? stock : Number(stock);
+      const parsedPrice = typeof price === "number" ? price : Number(price);
+      const parsedStock = typeof stock === "number" ? stock : Number(stock);
       if (Number.isNaN(parsedPrice) || Number.isNaN(parsedStock)) {
         throw new ValidationError("price and stock must be numeric");
       }
@@ -100,15 +127,25 @@ console.log('req.files', Array.isArray(req.files) ? (req.files as any[]).map(f =
         },
       });
 
-      logger.info('Product created successfully', { productId: newlyCreatedProduct.id, productName: name });
-      return res.status(201).json(new ApiResponse(201, newlyCreatedProduct, 'Product created successfully.'));
+      logger.info("Product created successfully", {
+        productId: newlyCreatedProduct.id,
+        productName: name,
+      });
+      return res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            newlyCreatedProduct,
+            "Product created successfully."
+          )
+        );
     } catch (error) {
-      logger.requestError(error as Error, req, 'createProduct');
+      logger.requestError(error as Error, req, "createProduct");
       throw error;
     }
   }
 );
-
 
 // TODO:- Add pagination
 const fetchAllProductsForAdmin = asyncHandler(
