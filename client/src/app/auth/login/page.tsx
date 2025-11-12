@@ -31,17 +31,17 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const checkFirstLevelOfValidation = await protectSignInAction(
-      formData.email
-    );
+    // const checkFirstLevelOfValidation = await protectSignInAction(
+    //   formData.email
+    // );
 
-    if (!checkFirstLevelOfValidation.success) {
-      toast({
-        title: checkFirstLevelOfValidation.error,
-        variant: "destructive",
-      });
-      return;
-    }
+    // if (!checkFirstLevelOfValidation.success) {
+    //   toast({
+    //     title: checkFirstLevelOfValidation.error,
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     const success = await login(formData.email, formData.password);
     if (success) {
