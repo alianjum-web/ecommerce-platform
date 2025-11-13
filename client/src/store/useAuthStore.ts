@@ -25,7 +25,8 @@ type AuthStore = {
 };
 
 const axiosInstance = axios.create({
-  baseURL: API_ROUTES.AUTH,
+  // baseURL: API_ROUTES.AUTH,
+  baseURL: "/api/auth",
   withCredentials: true,
 });
 
@@ -92,10 +93,26 @@ export const useAuthStore = create<AuthStore>()(
           });
         }
       },
+      // refreshAccessToken: async () => {
+      //   try {
+      //     await axiosInstance.post("/refresh-token");
+      //     return true;
+      //   } catch (e) {
+      //     console.error(e);
+      //     return false;
+      //   }
+      // },
       refreshAccessToken: async () => {
         try {
-          await axiosInstance.post("/refresh-token");
-          return true;
+          // call proxy refresh endpoint which will forward Set-Cookie headers to the browser
+          const res = await axiosInstance.post("/refresh");
+          if (res?.data?.success) {
+            // optionally fetch current user profile if backend returns it, or call /me
+            // const me = await axiosInstance.get("/me");
+            // set({ user: me.data.user });
+            return true;
+          }
+          return false;
         } catch (e) {
           console.error(e);
           return false;
