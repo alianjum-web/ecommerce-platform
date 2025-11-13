@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@/utils/api";
+// store/useAuthStore.ts
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -14,20 +14,15 @@ type AuthStore = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  register: (
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<string | null>;
+  register: (name: string, email: string, password: string) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
-
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<Boolean>;
+  refreshAccessToken: () => Promise<boolean>;
+  fetchMe: () => Promise<User | null>;
 };
 
 const axiosInstance = axios.create({
-  // baseURL: API_ROUTES.AUTH,
-  baseURL: "/api/auth",
+  baseURL: "/api/auth", // same-origin proxy
   withCredentials: true,
 });
 
@@ -37,46 +32,41 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       isLoading: false,
       error: null,
+
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post("/register", {
-            name,
-            email,
-            password,
-          });
-
+          const response = await axiosInstance.post("/register", { name, email, password });
           set({ isLoading: false });
           return response.data.userId;
         } catch (error) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Registration failed"
-              : "Registration failed",
+            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Registration failed" : "Registration failed",
           });
-
           return null;
         }
       },
+
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post("/login", {
-            email,
-            password,
-          });
+          const response = await axiosInstance.post("/login", { email, password });
 
-          set({ isLoading: false, user: response.data.user });
-          return true;
+          // if backend returns user, use it; otherwise fetch /me
+          if (response?.data?.user) {
+            set({ isLoading: false, user: response.data.user });
+            return true;
+          }
+
+          const user = await get().fetchMe();
+          set({ isLoading: false, user });
+          return !!user;
         } catch (error) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Login failed"
-              : "Login failed",
+            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Login failed" : "Login failed",
           });
-
           return false;
         }
       },
@@ -89,48 +79,41 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Logout failed"
-              : "Logout failed",
+            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Logout failed" : "Logout failed",
           });
         }
       },
-      // refreshAccessToken: async () => {
-      //   try {
-      //     await axiosInstance.post("/refresh-token");
-      //     return true;
-      //   } catch (e) {
-      //     console.error(e);
-      //     return false;
-      //   }
-      // },
+
       refreshAccessToken: async () => {
         try {
-          // call proxy refresh endpoint which will forward Set-Cookie headers to the browser
           const res = await axiosInstance.post("/refresh");
-          if (res?.data?.success) {
-            // optionally fetch current user profile if backend returns it, or call /me
-            // const me = await axiosInstance.get("/me");
-            // set({ user: me.data.user });
-            return true;
+          // consider backend returning { success: true } or 200
+          if (res?.status === 200 && (res?.data?.success ?? true)) {
+            // populate the user after refresh
+            const user = await get().fetchMe();
+            if (user) {
+              set({ user });
+              return true;
+            }
+            return false;
           }
           return false;
         } catch (e) {
-          console.error(e);
+          console.error("refreshAccessToken error", e);
           return false;
         }
       },
-       fetchMe: async () => {
+
+      fetchMe: async () => {
         try {
           const res = await axiosInstance.get("/me");
           if (res?.data?.user) {
             set({ user: res.data.user });
             return res.data.user as User;
           }
-          // optional: if server returns different shape
           return null;
         } catch (error) {
-          // 401 or other => clear user
+          // clear user on 401 or other failures
           set({ user: null });
           return null;
         }
