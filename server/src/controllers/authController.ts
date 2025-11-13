@@ -79,7 +79,9 @@ const register = async (req: Request, res: Response): Promise<void> => {
 const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-    const extractCurrentUser = await prisma.user.findUnique({ where: { email } });
+    const extractCurrentUser = await prisma.user.findUnique({
+      where: { email },
+    });
 
     if (
       !extractCurrentUser ||
@@ -122,6 +124,45 @@ const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+const getCurrentUser = async (req: Request, res: Response) => {
+  try {
+    // Extract token from cookies or Authorization header
+    const token =
+      req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    // Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    const userId = Number((decoded as any).userId); // convert to number
+    if (Number.isNaN(userId)) {
+      return res.status(401).json({ error: "Invalid token payload" });
+    }
+
+    // Fetch user from DB
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+};
 
 // POST /refresh-token
 const refreshTokenController = async (req: Request, res: Response) => {
@@ -130,7 +171,9 @@ const refreshTokenController = async (req: Request, res: Response) => {
     if (!token) return res.status(401).json({ success: false });
 
     const hashed = hashToken(token);
-    const user = await prisma.user.findFirst({ where: { refreshToken: hashed } });
+    const user = await prisma.user.findFirst({
+      where: { refreshToken: hashed },
+    });
     if (!user) return res.status(401).json({ success: false });
 
     // rotate tokens: new access token, optionally new refresh token
@@ -138,17 +181,27 @@ const refreshTokenController = async (req: Request, res: Response) => {
     const newRefreshToken = uuidv4();
     const newHashed = hashToken(newRefreshToken);
 
-    await prisma.user.update({ where: { id: user.id }, data: { refreshToken: newHashed } });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newHashed },
+    });
 
     await setTokens(res, accessToken, newRefreshToken);
 
-    return res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    return res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false });
   }
 };
-
 
 const logout = async (req: Request, res: Response): Promise<void> => {
   res.clearCookie("accessToken");
@@ -159,9 +212,4 @@ const logout = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
-export {
-  register,
-  login,
-  refreshTokenController,
-  logout
-}
+export { register, login, getCurrentUser, refreshTokenController, logout };

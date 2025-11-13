@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import CommonLayout from "@/components/common/layout";
-
+import AuthProvider from "@/components/authProvider";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,10 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className="antialiased"
-      >
-        <CommonLayout>{children}</CommonLayout>
+      <body className="antialiased">
+        <AuthProvider>
+          <CommonLayout>{children}</CommonLayout>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

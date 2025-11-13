@@ -20,6 +20,7 @@ type AuthStore = {
     password: string
   ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
+
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<Boolean>;
 };
@@ -79,6 +80,7 @@ export const useAuthStore = create<AuthStore>()(
           return false;
         }
       },
+
       logout: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -116,6 +118,21 @@ export const useAuthStore = create<AuthStore>()(
         } catch (e) {
           console.error(e);
           return false;
+        }
+      },
+       fetchMe: async () => {
+        try {
+          const res = await axiosInstance.get("/me");
+          if (res?.data?.user) {
+            set({ user: res.data.user });
+            return res.data.user as User;
+          }
+          // optional: if server returns different shape
+          return null;
+        } catch (error) {
+          // 401 or other => clear user
+          set({ user: null });
+          return null;
         }
       },
     }),
