@@ -26,18 +26,26 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: 'include', // Add this
     });
 
     console.log("✅ Backend response status:", backendRes.status);
     
+    // Get the response data
     const responseData = await backendRes.json();
-    const response = NextResponse.json(responseData, { status: backendRes.status });
+    
+    // Create response
+    const response = NextResponse.json(responseData, { 
+      status: backendRes.status 
+    });
 
-    // Forward set-cookie headers from backend
-    const setCookie = backendRes.headers.get("set-cookie");
-    if (setCookie) {
-      console.log("🍪 Setting cookies from backend");
-      response.headers.set("Set-Cookie", setCookie);
+    // Forward ALL set-cookie headers from backend
+    const setCookieHeader = backendRes.headers.getSetCookie();
+    if (setCookieHeader && setCookieHeader.length > 0) {
+      console.log("🍪 Setting cookies from backend:", setCookieHeader);
+      setCookieHeader.forEach(cookie => {
+        response.headers.append('Set-Cookie', cookie);
+      });
     }
 
     return response;

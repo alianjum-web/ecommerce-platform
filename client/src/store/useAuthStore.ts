@@ -32,8 +32,8 @@ const getBaseURL = () => {
     : process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL; // Replace with your actual backend URL
 };
 const axiosInstance = axios.create({
-  baseURL: getBaseURL(),
-  // baseURL: "/api/auth", // same origin-proxy
+  // baseURL: getBaseURL(),
+  baseURL: "/api/auth", // same origin-proxy
   withCredentials: true,
 });
 
