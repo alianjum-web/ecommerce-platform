@@ -119,7 +119,11 @@ export const useAuthStore = create<AuthStore>()(
       },
       refreshAccessToken: async () => {
         try {
-          const res = await axiosInstance.post("/refresh-token"); // ← Fix this
+          console.log("🔄 Attempting token refresh...");
+          const res = await axiosInstance.post("/refresh-token");
+
+          console.log("✅ Refresh response:", res.status, res.data);
+
           if (res?.status === 200 && (res?.data?.success ?? true)) {
             const user = await get().fetchMe();
             if (user) {
@@ -130,9 +134,7 @@ export const useAuthStore = create<AuthStore>()(
           }
           return false;
         } catch (e) {
-          console.error("Refresh token failed:", e);
-          // Clear user on refresh failure
-          set({ user: null });
+          console.error("Refresh token failed:", e); 
           return false;
         }
       },
