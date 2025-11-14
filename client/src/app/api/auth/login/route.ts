@@ -1,59 +1,147 @@
-// app/api/auth/login/route.ts
+// app/api/auth/login/route.ts - PRODUCTION READY
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Constants for better maintainability
+const ERROR_MESSAGES = {
+  BACKEND_NOT_CONFIGURED: "Backend URL not configured",
+  INVALID_REQUEST: "Invalid request body",
+  SERVICE_UNAVAILABLE: "Authentication service unavailable",
+  TIMEOUT: "Request timeout",
+} as const;
+
+const TIMEOUT_MS = 10000; // 10 seconds
+
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+  const BACKEND_URL = process.env.BACKEND_URL;
   
-  console.log("🔧 Login proxy called");
-  console.log("🌐 Backend URL:", BACKEND_URL);
-  
+  // Early validation with better error handling
   if (!BACKEND_URL) {
-    console.error("❌ Backend URL not configured");
+    console.error("Configuration error: BACKEND_URL not set");
     return NextResponse.json(
-      { success: false, error: "Backend URL not configured" },
+      { 
+        success: false, 
+        error: ERROR_MESSAGES.BACKEND_NOT_CONFIGURED,
+        code: "CONFIG_ERROR"
+      },
       { status: 500 }
     );
   }
 
   try {
     const body = await req.text();
-    console.log("📦 Request body received");
+    
+    // Validate request body
+    if (!body?.trim()) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: ERROR_MESSAGES.INVALID_REQUEST,
+          code: "INVALID_BODY"
+        },
+        { status: 400 }
+      );
+    }
+
+    // Parse to validate JSON structure
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Invalid JSON in request body",
+          code: "INVALID_JSON"
+        },
+        { status: 400 }
+      );
+    }
+
+    // Add timeout protection
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: "POST",
-      body,
+      body: JSON.stringify(parsedBody), // Use parsed and re-stringified body
       headers: {
         "Content-Type": "application/json",
+        "User-Agent": "NextJS-Auth-Proxy/1.0",
       },
-      credentials: 'include', // Add this
+      credentials: 'include',
+      signal: controller.signal,
     });
 
-    console.log("✅ Backend response status:", backendRes.status);
-    
-    // Get the response data
-    const responseData = await backendRes.json();
-    
-    // Create response
-    const response = NextResponse.json(responseData, { 
-      status: backendRes.status 
-    });
+    clearTimeout(timeoutId);
 
-    // Forward ALL set-cookie headers from backend
-    const setCookieHeader = backendRes.headers.getSetCookie();
-    if (setCookieHeader && setCookieHeader.length > 0) {
-      console.log("🍪 Setting cookies from backend:", setCookieHeader);
-      setCookieHeader.forEach(cookie => {
-        response.headers.append('Set-Cookie', cookie);
+    // Handle non-OK responses with better error information
+    if (!backendRes.ok) {
+      const errorText = await backendRes.text();
+      let errorData;
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: `Backend responded with ${backendRes.status}` };
+      }
+
+      console.warn(`Backend login failed: ${backendRes.status}`, {
+        status: backendRes.status,
+        error: errorData.error
       });
+
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorData.error || `Login failed with status ${backendRes.status}`,
+          code: `BACKEND_${backendRes.status}`
+        },
+        { status: backendRes.status }
+      );
     }
 
+    const responseData = await backendRes.json();
+    const response = NextResponse.json(responseData, { status: backendRes.status });
+
+    // ✅ Improved cookie handling with for...of
+    const setCookieHeaders = backendRes.headers.getSetCookie();
+    if (setCookieHeaders?.length > 0) {
+      console.log(`🍪 Forwarding ${setCookieHeaders.length} cookies from backend`);
+      
+      for (const cookie of setCookieHeaders) {
+        response.headers.append('Set-Cookie', cookie);
+      }
+    }
+
+    // Add security headers
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+
     return response;
-  } catch (error) {
-    console.error("❌ Login proxy error:", error);
+
+  } catch (error: any) {
+    console.error("Login proxy error:", error);
+    
+    // Differentiate error types for better client handling
+    if (error.name === 'AbortError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: ERROR_MESSAGES.TIMEOUT,
+          code: "TIMEOUT"
+        },
+        { status: 504 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      { 
+        success: false, 
+        error: ERROR_MESSAGES.SERVICE_UNAVAILABLE,
+        code: "SERVICE_UNAVAILABLE"
+      },
+      { status: 503 }
     );
   }
 }
