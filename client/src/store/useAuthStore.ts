@@ -25,8 +25,15 @@ type AuthStore = {
   fetchMe: () => Promise<User | null>;
 };
 
+const getBaseURL = () => {
+  // Use your actual backend URL here
+  return process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:4001/api/auth'
+    : process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL; // Replace with your actual backend URL
+};
 const axiosInstance = axios.create({
-  baseURL: "/api/auth", // same-origin proxy
+  baseURL: getBaseURL(),
+  // baseURL: "/api/auth", // same origin-proxy
   withCredentials: true,
 });
 
