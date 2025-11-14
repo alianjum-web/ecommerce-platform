@@ -1,4 +1,4 @@
-// app/api/auth/refresh/route.ts
+// app/api/auth/refresh-token/route.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

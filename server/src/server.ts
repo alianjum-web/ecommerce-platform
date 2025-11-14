@@ -31,6 +31,9 @@ const corsOptions: cors.CorsOptions = {
 
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      "https://ecommerce-platform-with-prisma.vercel.app",
+      "https://ecommerce-platform-with-prisma-5rkgqs0m5.vercel.app",
+      "https://ecommerce-platform-with-git-f7ba5e-muhammad-ali-anjums-projects.vercel.app",
       "http://localhost:3000",
       "http://localhost:3012",
     ];
