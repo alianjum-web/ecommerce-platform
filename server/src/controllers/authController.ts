@@ -25,12 +25,15 @@ async function setTokens(
   // For cross-site (frontend <> api on different origins) use sameSite: "none" and secure:true in prod
   const isProd = process.env.NODE_ENV === "production";
 
+    const domain = isProd ? '.ecommerce-platform-with-prisma.vercel.app' : undefined;
+
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax", // in prod: none, in dev lax is okay
     maxAge: 60 * 60 * 1000, // 1 hour in ms
     path: "/",
+    domain: domain, // ✅ Add domain for production
   });
 
   res.cookie("refreshToken", refreshToken, {
@@ -40,6 +43,7 @@ async function setTokens(
     // 7 days -> ms
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
+    domain: domain, // ✅ Add domain for production
   });
 }
 
@@ -204,8 +208,18 @@ const refreshTokenController = async (req: Request, res: Response) => {
 };
 
 const logout = async (req: Request, res: Response): Promise<void> => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  const isProd = process.env.NODE_ENV === "production";
+  const domain = isProd ? '.ecommerce-platform-with-prisma.vercel.app' : undefined;
+
+  res.clearCookie("accessToken", { 
+    path: "/",
+    domain: domain 
+  });
+  res.clearCookie("refreshToken", { 
+    path: "/",
+    domain: domain 
+  });
+  
   res.status(200).json({
     success: true,
     message: "User logged out successfully",
