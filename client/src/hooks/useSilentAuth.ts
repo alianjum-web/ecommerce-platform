@@ -1,4 +1,4 @@
-// hooks/useSilentAuth.tsx - FIXED VERSION
+// hooks/useSilentAuth.tsx - SMART VERSION
 "use client";
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -11,57 +11,80 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-function isTokenExpiredOrExpiring(token: string | null): boolean {
-  if (!token) return true;
-  
+function getTokenExpiry(token: string | null): number | null {
+  if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiry = payload.exp * 1000; // Convert to milliseconds
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-    
-    return expiry <= (now + fiveMinutes);
+    return payload.exp ? payload.exp * 1000 : null;
   } catch {
-    return true;
+    return null;
   }
 }
 
 export default function useSilentAuth() {
   const refreshAccessToken = useAuthStore((s) => s.refreshAccessToken);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    const checkAndRefreshToken = async () => {
+    const scheduleTokenRefresh = () => {
       const accessToken = getCookie('accessToken');
       const refreshToken = getCookie('refreshToken');
       
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
       if (!refreshToken) {
         console.log("🔐 No refresh token available");
         return;
       }
 
-      // Check if access token is expired or about to expire
-      if (isTokenExpiredOrExpiring(accessToken)) {
-        console.log("🔄 Access token needs refresh");
-        try {
-          await refreshAccessToken();
-        } catch (error) {
-          console.error("Silent refresh failed:", error);
+      const expiry = getTokenExpiry(accessToken);
+      const now = Date.now();
+
+      if (expiry) {
+        const timeUntilExpiry = expiry - now;
+        
+        // Only refresh if token expires within 5 minutes
+        if (timeUntilExpiry <= 5 * 60 * 1000) {
+          console.log("🔄 Token expiring soon, refreshing...");
+          refreshAccessToken().catch(error => {
+            console.error("Token refresh failed:", error);
+          });
+        } else {
+          // Schedule refresh for 1 minute before expiry
+          const refreshTime = timeUntilExpiry - (60 * 1000); // 1 minute before expiry
+          console.log(`⏰ Scheduling token refresh in ${Math.round(refreshTime/1000/60)} minutes`);
+          
+          timeoutRef.current = setTimeout(() => {
+            refreshAccessToken().catch(error => {
+              console.error("Scheduled token refresh failed:", error);
+            });
+          }, Math.max(refreshTime, 0)); // Ensure positive time
         }
+      } else {
+        // If we can't read token expiry, do a safe refresh every 30 minutes
+        console.log("⏰ Cannot read token expiry, safe refresh in 30 minutes");
+        timeoutRef.current = setTimeout(() => {
+          refreshAccessToken().catch(error => {
+            console.error("Safe token refresh failed:", error);
+          });
+        }, 30 * 60 * 1000); // 30 minutes
       }
     };
 
-    // Check immediately on mount
-    checkAndRefreshToken();
+    // Initial scheduling
+    scheduleTokenRefresh();
 
-    // Set up interval to check every 30 seconds
-    refreshIntervalRef.current = setInterval(checkAndRefreshToken, 30000);
+    // Also set up a fallback check every hour for edge cases
+    const fallbackInterval = setInterval(scheduleTokenRefresh, 60 * 60 * 1000); // 1 hour
 
-    // Cleanup interval on unmount
     return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
+      clearInterval(fallbackInterval);
     };
   }, [refreshAccessToken]);
 }
