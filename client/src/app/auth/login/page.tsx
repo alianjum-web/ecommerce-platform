@@ -42,15 +42,26 @@ function LoginPage() {
     //   });
     //   return;
     // }
-
     const success = await login(formData.email, formData.password);
     if (success) {
       toast({
-        title: "Login Successfull!",
+        title: "Login Successful!",
       });
-      const user = useAuthStore.getState().user;
-      if (user?.role === "SUPER_ADMIN") router.push("/super-admin");
-      else router.push("/home");
+
+      // Use the user from the store directly
+      const { user } = useAuthStore.getState();
+      if (user?.role === "SUPER_ADMIN") {
+        router.push("/super-admin");
+      } else {
+        router.push("/home");
+      }
+    } else {
+      // Show the actual error from the store
+      const { error } = useAuthStore.getState();
+      toast({
+        title: error || "Login failed",
+        variant: "destructive",
+      });
     }
   };
   return (

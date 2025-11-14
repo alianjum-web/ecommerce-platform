@@ -1,14 +1,7 @@
 // app/api/auth/me/route.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-/**
- * Proxy GET /api/auth/me  ->  BACKEND_URL/auth/me
- *
- * Requirements:
- * - Set process.env.BACKEND_URL to your backend base (e.g. https://ecommerce-platform-841i.onrender.com)
- * - Backend /auth/me must accept cookie-based auth (reads refresh/access cookies)
- *
+/*
  * Behavior:
  * - forwards the incoming cookie header to the backend so backend can read cookies
  * - returns backend response body & status to client

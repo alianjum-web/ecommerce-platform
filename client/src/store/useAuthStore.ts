@@ -14,7 +14,11 @@ type AuthStore = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -36,37 +40,52 @@ export const useAuthStore = create<AuthStore>()(
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post("/register", { name, email, password });
+          const response = await axiosInstance.post("/register", {
+            name,
+            email,
+            password,
+          });
           set({ isLoading: false });
           return response.data.userId;
         } catch (error) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Registration failed" : "Registration failed",
+            error: axios.isAxiosError(error)
+              ? error?.response?.data?.error || "Registration failed"
+              : "Registration failed",
           });
           return null;
         }
       },
 
+      // store/useAuthStore.ts
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post("/login", { email, password });
-
-          // if backend returns user, use it; otherwise fetch /me
-          if (response?.data?.user) {
-            set({ isLoading: false, user: response.data.user });
-            return true;
-          }
-
-          const user = await get().fetchMe();
-          set({ isLoading: false, user });
-          return !!user;
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Login failed" : "Login failed",
+          const response = await axiosInstance.post("/login", {
+            email,
+            password,
           });
+
+          console.log("Login response:", response.data); // Debug log
+
+          if (response.data.success && response.data.user) {
+            set({ isLoading: false, user: response.data.user, error: null });
+            return true;
+          } else {
+            set({
+              isLoading: false,
+              error: response.data.error || "Login failed",
+            });
+            return false;
+          }
+        } catch (error) {
+          console.error("Login error:", error);
+          const errorMessage = axios.isAxiosError(error)
+            ? error.response?.data?.error || error.message || "Login failed"
+            : "Login failed";
+
+          set({ isLoading: false, error: errorMessage });
           return false;
         }
       },
@@ -79,17 +98,16 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error) ? error?.response?.data?.error || "Logout failed" : "Logout failed",
+            error: axios.isAxiosError(error)
+              ? error?.response?.data?.error || "Logout failed"
+              : "Logout failed",
           });
         }
       },
-
       refreshAccessToken: async () => {
         try {
-          const res = await axiosInstance.post("/refresh");
-          // consider backend returning { success: true } or 200
+          const res = await axiosInstance.post("/refresh-token"); // ← Fix this
           if (res?.status === 200 && (res?.data?.success ?? true)) {
-            // populate the user after refresh
             const user = await get().fetchMe();
             if (user) {
               set({ user });
@@ -99,21 +117,22 @@ export const useAuthStore = create<AuthStore>()(
           }
           return false;
         } catch (e) {
-          console.error("refreshAccessToken error", e);
+          console.error("Refresh token failed:", e);
+          // Clear user on refresh failure
+          set({ user: null });
           return false;
         }
       },
-
       fetchMe: async () => {
         try {
           const res = await axiosInstance.get("/me");
           if (res?.data?.user) {
-            set({ user: res.data.user });
-            return res.data.user as User;
+            set({ user: res.data.user, error: null });
+            return res.data.user;
           }
           return null;
         } catch (error) {
-          // clear user on 401 or other failures
+          console.error("Fetch me failed:", error);
           set({ user: null });
           return null;
         }
