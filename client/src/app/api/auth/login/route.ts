@@ -10,7 +10,7 @@ const ERROR_MESSAGES = {
   TIMEOUT: "Request timeout",
 } as const;
 
-const TIMEOUT_MS = 10000; // 10 seconds
+const TIMEOUT_MS = 20000; // 10 seconds
 
 export async function POST(req: NextRequest) {
   const BACKEND_URL = process.env.BACKEND_URL;
