@@ -25,7 +25,7 @@ async function setTokens(
   // For cross-site (frontend <> api on different origins) use sameSite: "none" and secure:true in prod
   const isProd = process.env.NODE_ENV === "production";
 
-    const domain = isProd ? '.ecommerce-platform-with-prisma.vercel.app' : undefined;
+    const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -209,7 +209,7 @@ const refreshTokenController = async (req: Request, res: Response) => {
 
 const logout = async (req: Request, res: Response): Promise<void> => {
   const isProd = process.env.NODE_ENV === "production";
-  const domain = isProd ? '.ecommerce-platform-with-prisma.vercel.app' : undefined;
+  const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
 
   res.clearCookie("accessToken", { 
     path: "/",
