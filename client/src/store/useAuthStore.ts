@@ -58,29 +58,42 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // store/useAuthStore.ts
+      // store/useAuthStore.ts - Updated login function
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
+          console.log("🔄 Login attempt started");
+          console.log("📧 Email:", email);
+          console.log("🌐 Base URL:", axiosInstance.defaults.baseURL);
+
           const response = await axiosInstance.post("/login", {
             email,
             password,
           });
 
-          console.log("Login response:", response.data); // Debug log
+          console.log("✅ Login response status:", response.status);
+          console.log("📦 Login response data:", response.data);
 
           if (response.data.success && response.data.user) {
             set({ isLoading: false, user: response.data.user, error: null });
             return true;
           } else {
+            const errorMsg = response.data.error || "Login failed";
+            console.log("❌ Login failed:", errorMsg);
             set({
               isLoading: false,
-              error: response.data.error || "Login failed",
+              error: errorMsg,
             });
             return false;
           }
-        } catch (error) {
-          console.error("Login error:", error);
+        } catch (error: any) {
+          console.error("❌ Login error:", error);
+          console.log("🔍 Error details:", {
+            message: error?.message,
+            code: error.code,
+            response: error.response?.data,
+          });
+
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
             : "Login failed";

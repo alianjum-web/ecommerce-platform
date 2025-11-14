@@ -1,30 +1,43 @@
+// app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
-
-  const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
-    method: "POST",
-    body,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  const text = await backendRes.text();
-
-  const res = new NextResponse(text, {
-    status: backendRes.status,
-  });
+  const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
   
-  const setCookie = req.headers.get("set-cookie");
-  if (setCookie) {
-    res.headers.set("Set-Cookie", setCookie);
+  if (!BACKEND_URL) {
+    return NextResponse.json(
+      { success: false, error: "Backend URL not configured" },
+      { status: 500 }
+    );
   }
 
-  const contentType = backendRes.headers.get("Content-Type");
-  if (contentType) res.headers.set("Content-Type", contentType);
-  return res;
+  try {
+    const body = await req.text();
+
+    const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const responseData = await backendRes.json();
+    const response = NextResponse.json(responseData, { status: backendRes.status });
+
+    // Forward set-cookie headers from backend
+    const setCookie = backendRes.headers.get("set-cookie");
+    if (setCookie) {
+      response.headers.set("Set-Cookie", setCookie);
+    }
+
+    return response;
+  } catch (error) {
+    console.error("Login proxy error:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
