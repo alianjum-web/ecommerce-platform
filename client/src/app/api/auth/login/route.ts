@@ -10,10 +10,11 @@ const ERROR_MESSAGES = {
   TIMEOUT: "Request timeout",
 } as const;
 
-const TIMEOUT_MS = 20000; // 10 seconds
+const TIMEOUT_MS = 10000; // 10 seconds
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL;
+  const BACKEND_URL =
+    process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
 
   // Early validation with better error handling
   if (!BACKEND_URL) {
@@ -107,14 +108,13 @@ export async function POST(req: NextRequest) {
       status: backendRes.status,
     });
 
-    // ✅ Improved cookie handling with for...of
     const setCookieHeaders = backendRes.headers.getSetCookie();
-    console.log("getSetCookies:", setCookieHeaders);
+
     if (setCookieHeaders?.length > 0) {
       console.log(
         `🍪 Forwarding ${setCookieHeaders.length} cookies from backend`
       );
-
+      // ✅ Improved cookie handling with for...of
       for (const cookie of setCookieHeaders) {
         response.headers.append("Set-Cookie", cookie);
       }
