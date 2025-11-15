@@ -113,3 +113,7 @@ const useApi = () => {
 
 # TODO
 - Handle the pagination from the server for the controller fetchAllProductsForAdmin
+- add pino logger in teh app/api/auth which is acting as a proxy: NextJS server accepts the request validates it 
+  and send to the actual backend and forwared the response such as cookies back to the client.
+- Centralize the error shape for consitent errro.
+- Reduce login latency currently the abortcontroller in the app/login is set to 20 make it to 10 and functional

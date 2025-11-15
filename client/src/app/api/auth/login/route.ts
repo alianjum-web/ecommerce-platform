@@ -17,9 +17,8 @@ export async function POST(req: NextRequest) {
 
   // Early validation with better error handling
   if (!BACKEND_URL) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Configuration error: BACKEND_URL not set");
-    }
+    console.error("Configuration error: BACKEND_URL not set");
+
     return NextResponse.json(
       {
         success: false,
@@ -87,12 +86,10 @@ export async function POST(req: NextRequest) {
       } catch {
         errorData = { error: `Backend responded with ${backendRes.status}` };
       }
-      if (process.env.NODE_ENV !== "production") {
-        console.warn(`Backend login failed: ${backendRes.status}`, {
-          status: backendRes.status,
-          error: errorData.error,
-        });
-      }
+      console.warn(`Backend login failed: ${backendRes.status}`, {
+        status: backendRes.status,
+        error: errorData.error,
+      });
 
       return NextResponse.json(
         {
@@ -113,11 +110,9 @@ export async function POST(req: NextRequest) {
     // ✅ Improved cookie handling with for...of
     const setCookieHeaders = backendRes.headers.getSetCookie();
     if (setCookieHeaders?.length > 0) {
-      if (process.env.NODE_ENV !== "production") {
-        console.log(
-          `🍪 Forwarding ${setCookieHeaders.length} cookies from backend`
-        );
-      }
+      console.log(
+        `🍪 Forwarding ${setCookieHeaders.length} cookies from backend`
+      );
 
       for (const cookie of setCookieHeaders) {
         response.headers.append("Set-Cookie", cookie);
