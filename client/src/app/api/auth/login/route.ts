@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ Improved cookie handling with for...of
     const setCookieHeaders = backendRes.headers.getSetCookie();
+    console.log("getSetCookies:", setCookieHeaders);
     if (setCookieHeaders?.length > 0) {
       console.log(
         `🍪 Forwarding ${setCookieHeaders.length} cookies from backend`
