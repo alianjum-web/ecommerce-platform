@@ -14,15 +14,17 @@ const TIMEOUT_MS = 20000; // 10 seconds
 
 export async function POST(req: NextRequest) {
   const BACKEND_URL = process.env.BACKEND_URL;
-  
+
   // Early validation with better error handling
   if (!BACKEND_URL) {
-    console.error("Configuration error: BACKEND_URL not set");
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Configuration error: BACKEND_URL not set");
+    }
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: ERROR_MESSAGES.BACKEND_NOT_CONFIGURED,
-        code: "CONFIG_ERROR"
+        code: "CONFIG_ERROR",
       },
       { status: 500 }
     );
@@ -30,14 +32,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.text();
-    
+
     // Validate request body
     if (!body?.trim()) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: ERROR_MESSAGES.INVALID_REQUEST,
-          code: "INVALID_BODY"
+          code: "INVALID_BODY",
         },
         { status: 400 }
       );
@@ -49,10 +51,10 @@ export async function POST(req: NextRequest) {
       parsedBody = JSON.parse(body);
     } catch {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "Invalid JSON in request body",
-          code: "INVALID_JSON"
+          code: "INVALID_JSON",
         },
         { status: 400 }
       );
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
         "User-Agent": "NextJS-Auth-Proxy/1.0",
       },
-      credentials: 'include',
+      credentials: "include",
       signal: controller.signal,
     });
 
@@ -79,67 +81,74 @@ export async function POST(req: NextRequest) {
     if (!backendRes.ok) {
       const errorText = await backendRes.text();
       let errorData;
-      
+
       try {
         errorData = JSON.parse(errorText);
       } catch {
         errorData = { error: `Backend responded with ${backendRes.status}` };
       }
-
-      console.warn(`Backend login failed: ${backendRes.status}`, {
-        status: backendRes.status,
-        error: errorData.error
-      });
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`Backend login failed: ${backendRes.status}`, {
+          status: backendRes.status,
+          error: errorData.error,
+        });
+      }
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: errorData.error || `Login failed with status ${backendRes.status}`,
-          code: `BACKEND_${backendRes.status}`
+        {
+          success: false,
+          error:
+            errorData.error || `Login failed with status ${backendRes.status}`,
+          code: `BACKEND_${backendRes.status}`,
         },
         { status: backendRes.status }
       );
     }
 
     const responseData = await backendRes.json();
-    const response = NextResponse.json(responseData, { status: backendRes.status });
+    const response = NextResponse.json(responseData, {
+      status: backendRes.status,
+    });
 
     // ✅ Improved cookie handling with for...of
     const setCookieHeaders = backendRes.headers.getSetCookie();
     if (setCookieHeaders?.length > 0) {
-      console.log(`🍪 Forwarding ${setCookieHeaders.length} cookies from backend`);
-      
+      if (process.env.NODE_ENV !== "production") {
+        console.log(
+          `🍪 Forwarding ${setCookieHeaders.length} cookies from backend`
+        );
+      }
+
       for (const cookie of setCookieHeaders) {
-        response.headers.append('Set-Cookie', cookie);
+        response.headers.append("Set-Cookie", cookie);
       }
     }
 
     // Add security headers
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
 
     return response;
-
   } catch (error: any) {
     console.error("Login proxy error:", error);
-    
+
     // Differentiate error types for better client handling
-    if (error.name === 'AbortError') {
+    if (error.name === "AbortError") {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: ERROR_MESSAGES.TIMEOUT,
-          code: "TIMEOUT"
+          code: "TIMEOUT",
         },
         { status: 504 }
       );
     }
 
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: ERROR_MESSAGES.SERVICE_UNAVAILABLE,
-        code: "SERVICE_UNAVAILABLE"
+        code: "SERVICE_UNAVAILABLE",
       },
       { status: 503 }
     );
