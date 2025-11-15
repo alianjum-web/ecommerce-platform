@@ -71,7 +71,7 @@ function SuperAdminSidebar({ isOpen, toggle }: SidebarProps) {
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-background transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen  bg-background transition-all duration-300",
         isOpen ? "w-64" : "w-16",
         "border-r"
       )}
