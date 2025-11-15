@@ -20,6 +20,7 @@ import {
 } from "../ui/sheet";
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/store/useCartStore";
+import ThemeToggle from "../layout/Themetoggle";
 
 const navItems = [
   {
@@ -72,6 +73,7 @@ function Header() {
               >
                 Your Account
               </p>
+              <ThemeToggle />
               <Button
                 onClick={() => {
                   setShowSheetDialog(false);
