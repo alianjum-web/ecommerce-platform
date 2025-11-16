@@ -4,7 +4,6 @@ import { create } from "zustand";
 import type { Product } from "@/types/product";
 import { Console } from "console";
 
-
 interface ProductState {
   products: Product[];
   isLoading: boolean;
@@ -42,19 +41,20 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchAllProductsForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
-      console.log("fetching-for-admin-produts started....")
+      console.log("fetching-for-admin-produts started....");
+      console.log(`${API_ROUTES.PRODUCTS}/fetch-admin-products`);
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-admin-products`,
         {
           withCredentials: true,
         }
       );
-      console.log("fetching-for-admin-produts COMPLETETED.")
-      console.log("ADMIN_RESPONSE_PRODUCTS", response)
+      console.log("fetching-for-admin-produts COMPLETETED.");
+      console.log("ADMIN_RESPONSE_PRODUCTS", response);
 
-console.log(`Response client-products-fetching`, response.data )
-console.log(`Response client-products-fetching`, response.status)
-console.log("ALL_LOGS")
+      console.log(`Response client-products-fetching`, response.data);
+      console.log(`Response client-products-fetching`, response.status);
+      console.log("ALL_LOGS");
       set({ products: response.data, isLoading: false });
     } catch (e) {
       set({ error: "Failed to fetch product", isLoading: false });
@@ -133,7 +133,9 @@ console.log("ALL_LOGS")
         colors: params.colors?.join(","),
         brands: params.brands?.join(","),
       };
-console.log("Fetching started for the client products .")
+      console.log("Fetching started for the client products .");
+      console.log(`REQUEST_URL:${API_ROUTES.PRODUCTS}/fetch-client-products`);
+
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-client-products`,
         {
@@ -141,9 +143,9 @@ console.log("Fetching started for the client products .")
           withCredentials: true,
         }
       );
-console.log(`Response client-products-fetching`, response.data )
-console.log(`Response client-products-fetching`, response.status)
-console.log("ALL_LOGS")
+      console.log(`Response client-products-fetching`, response.data);
+      console.log(`Response client-products-fetching`, response.status);
+      console.log("ALL_LOGS");
       set({
         products: response.data.products,
         currentPage: response.data.currentPage,
