@@ -2,6 +2,7 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 import type { Product } from "@/types/product";
+import { Console } from "console";
 
 
 interface ProductState {
@@ -41,12 +42,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchAllProductsForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
+      console.log("fetching-for-admin-produts started....")
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-admin-products`,
         {
           withCredentials: true,
         }
       );
+      console.log("fetching-for-admin-produts COMPLETETED.")
+      console.log("ADMIN_RESPONSE_PRODUCTS", response)
 
       set({ products: response.data, isLoading: false });
     } catch (e) {
