@@ -1,15 +1,39 @@
 export interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  description: string;
-  gender: string;
-  sizes: string[];
-  colors: string[];
-  price: number;
-  stock: number;
-  rating?: number;
-  soldCount: number;
-  images: string[];
+  id: string;                 // UUID or DB id (e.g. "6364f..."). Keep as string for flexibility.
+  name: string;               // Human-facing product title
+  brand: string;              // Brand slug or name
+  category: string;           // Category slug (e.g. "shirts")
+  description?: string;       // Optional longer description (may be absent)
+  gender?: "male" | "female" | "unisex" | "other"; // if relevant to business logic
+  sizes: string[];            // Allowed size identifiers, e.g. ["S","M","L"]
+  colors: string[];           // Color hex strings or color names
+  price: number;              // Stored in smallest currency unit (cents) OR decimal — pick one
+  currency?: string;          // "USD", "PKR", etc. (useful if multi-currency)
+  stock: number;              // Available inventory count (>= 0)
+  rating?: number | null;     // Average rating, or null if none
+  soldCount?: number;         // How many sold
+  images: string[];           // Array of image URLs (0..n)
+  createdAt?: string;         // ISO timestamp from server (e.g. "2025-11-16T12:34:56Z")
+  updatedAt?: string;         // ISO timestamp
+}
+
+
+export interface ProductFilters {
+  page?: number;
+  limit?: number;
+  categories?: string[];
+  sizes?: string[];
+  colors?: string[];
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface ProductResponse {
+  products: Product[];
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
 }
