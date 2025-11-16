@@ -52,6 +52,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       console.log("fetching-for-admin-produts COMPLETETED.")
       console.log("ADMIN_RESPONSE_PRODUCTS", response)
 
+console.log(`Response client-products-fetching`, response.data )
+console.log(`Response client-products-fetching`, response.status)
+console.log("ALL_LOGS")
       set({ products: response.data, isLoading: false });
     } catch (e) {
       set({ error: "Failed to fetch product", isLoading: false });
@@ -138,7 +141,9 @@ console.log("Fetching started for the client products .")
           withCredentials: true,
         }
       );
-console.log(`Response client-products-fetching ${response}`)
+console.log(`Response client-products-fetching`, response.data )
+console.log(`Response client-products-fetching`, response.status)
+console.log("ALL_LOGS")
       set({
         products: response.data.products,
         currentPage: response.data.currentPage,
