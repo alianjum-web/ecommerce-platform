@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL;
+  const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.DEV_BACKEND_PORT}`;
   
   // Early validation
   if (!BACKEND_URL) {

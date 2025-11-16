@@ -117,3 +117,13 @@ const useApi = () => {
   and send to the actual backend and forwared the response such as cookies back to the client.
 - Centralize the error shape for consitent errro.
 - Reduce login latency currently the abortcontroller in the app/login is set to 20 make it to 10 and functional
+
+
+
+
+## Request Response Flow 
+### Local direct call
+Browser → backend(localhost:4001/login) → backend sets cookies for localhost:4001 → browser stores localhost:4001 cookies
+
+### Production proxy call
+Browser(yourapp.com) → yourapp.com/api/auth/login → Next.js proxy → forwards to backend-service.com/login → backend sets backend-service.com cookies → proxy rewrites cookies → browser stores yourapp.com cookies

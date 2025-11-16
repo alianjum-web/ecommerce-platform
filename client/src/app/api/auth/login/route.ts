@@ -14,7 +14,8 @@ const TIMEOUT_MS = 20000; // 10 seconds
 
 export async function POST(req: NextRequest) {
   const BACKEND_URL =
-    process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+    process.env.BACKEND_URL ||
+    `http://localhost:${process.env.DEV_BACKEND_PORT}`;
 
   // Early validation with better error handling
   if (!BACKEND_URL) {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Add timeout protection
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
+    console.log(`BACKEND_URL: ${BACKEND_URL}/api/auth/login}`);
     const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: "POST",
       body: JSON.stringify(parsedBody), // Use parsed and re-stringified body
