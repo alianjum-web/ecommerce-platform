@@ -2,7 +2,19 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 import type { Product } from "@/types/product";
-import { Console } from "console";
+
+interface ProductFilters {
+  page?: number;
+  limit?: number;
+  categories?: string[];
+  sizes?: string[];
+  colors?: string[];
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
 
 interface ProductState {
   products: Product[];
@@ -16,18 +28,7 @@ interface ProductState {
   updateProduct: (id: string, productData: FormData) => Promise<Product>;
   deleteProduct: (id: string) => Promise<boolean>;
   getProductById: (id: string) => Promise<Product | null>;
-  fetchProductsForClient: (params: {
-    page?: number;
-    limit?: number;
-    categories?: string[];
-    sizes?: string[];
-    colors?: string[];
-    brands?: string[];
-    minPrice?: number;
-    maxPrice?: number;
-    sortBy?: string;
-    sortOrder?: "asc" | "desc";
-  }) => Promise<void>;
+  fetchProductsForClient: (params: ProductFilters) => Promise<void>;
   setCurrentPage: (page: number) => void;
 }
 
@@ -38,28 +39,34 @@ export const useProductStore = create<ProductState>((set, get) => ({
   currentPage: 1,
   totalPages: 1,
   totalProducts: 0,
+
   fetchAllProductsForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
-      console.log("fetching-for-admin-produts started....");
-      console.log(`${API_ROUTES.PRODUCTS}/fetch-admin-products`);
+      console.log("Fetching admin products...");
+      
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-admin-products`,
         {
           withCredentials: true,
         }
       );
-      console.log("fetching-for-admin-produts COMPLETETED.");
-      console.log("ADMIN_RESPONSE_PRODUCTS", response);
 
-      console.log(`Response client-products-fetching`, response.data);
-      console.log(`Response client-products-fetching`, response.status);
-      console.log("ALL_LOGS");
-      set({ products: response.data, isLoading: false });
-    } catch (e) {
-      set({ error: "Failed to fetch product", isLoading: false });
+      console.log("Admin products fetched successfully:", response.data);
+      
+      set({ 
+        products: response.data, 
+        isLoading: false 
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch admin products:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to fetch products", 
+        isLoading: false 
+      });
     }
   },
+
   createProduct: async (productData: FormData) => {
     set({ isLoading: true, error: null });
     try {
@@ -73,12 +80,19 @@ export const useProductStore = create<ProductState>((set, get) => ({
           },
         }
       );
+      
       set({ isLoading: false });
       return response.data;
-    } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+    } catch (error: any) {
+      console.error("Failed to create product:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to create product", 
+        isLoading: false 
+      });
+      throw error; // Re-throw to handle in component
     }
   },
+
   updateProduct: async (id: string, productData: FormData) => {
     set({ isLoading: true, error: null });
     try {
@@ -88,41 +102,67 @@ export const useProductStore = create<ProductState>((set, get) => ({
         {
           withCredentials: true,
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "multipart/form-data", // Changed from application/json
           },
         }
       );
+      
       set({ isLoading: false });
       return response.data;
-    } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+    } catch (error: any) {
+      console.error("Failed to update product:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to update product", 
+        isLoading: false 
+      });
+      throw error;
     }
   },
+
   deleteProduct: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.delete(`${API_ROUTES.PRODUCTS}/${id}`, {
-        withCredentials: true,
-      });
+      const response = await axios.delete(
+        `${API_ROUTES.PRODUCTS}/${id}`, 
+        {
+          withCredentials: true,
+        }
+      );
+      
       set({ isLoading: false });
       return response.data.success;
-    } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+    } catch (error: any) {
+      console.error("Failed to delete product:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to delete product", 
+        isLoading: false 
+      });
+      return false;
     }
   },
+
   getProductById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_ROUTES.PRODUCTS}/${id}`, {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `${API_ROUTES.PRODUCTS}/${id}`, 
+        {
+          withCredentials: true,
+        }
+      );
+      
       set({ isLoading: false });
       return response.data;
-    } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+    } catch (error: any) {
+      console.error("Failed to fetch product:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to fetch product", 
+        isLoading: false 
+      });
       return null;
     }
   },
+
   fetchProductsForClient: async (params) => {
     set({ isLoading: true, error: null });
     try {
@@ -133,8 +173,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
         colors: params.colors?.join(","),
         brands: params.brands?.join(","),
       };
-      console.log("Fetching started for the client products .");
-      console.log(`REQUEST_URL:${API_ROUTES.PRODUCTS}/fetch-client-products`);
+
+      console.log("Fetching client products with params:", queryParams);
 
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-client-products`,
@@ -143,19 +183,30 @@ export const useProductStore = create<ProductState>((set, get) => ({
           withCredentials: true,
         }
       );
-      console.log(`Response client-products-fetching`, response.data);
-      console.log(`Response client-products-fetching`, response.status);
-      console.log("ALL_LOGS");
-      set({
-        products: response.data.products,
+
+      console.log("Client products fetched successfully:", {
+        productsCount: response.data.products?.length,
         currentPage: response.data.currentPage,
         totalPages: response.data.totalPages,
-        totalProducts: response.data.totalProducts,
+        totalProducts: response.data.totalProducts
+      });
+
+      set({
+        products: response.data.products || [],
+        currentPage: response.data.currentPage || 1,
+        totalPages: response.data.totalPages || 1,
+        totalProducts: response.data.totalProducts || 0,
         isLoading: false,
       });
-    } catch (e) {
-      set({ error: "Failed to fetch products", isLoading: false });
+    } catch (error: any) {
+      console.error("Failed to fetch client products:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to fetch products", 
+        isLoading: false,
+        products: [], // Reset products on error
+      });
     }
   },
+
   setCurrentPage: (page: number) => set({ currentPage: page }),
 }));
