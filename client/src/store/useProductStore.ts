@@ -184,6 +184,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
       );
 
+      console.log("RESPONSE_OBJECT", response);
       console.log("Client products fetched successfully:", {
         productsCount: response.data.products?.length,
         currentPage: response.data.currentPage,
