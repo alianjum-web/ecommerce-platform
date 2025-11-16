@@ -24,8 +24,7 @@ export async function GET(req: NextRequest) {
     const backendRes = await fetch(`${BACKEND_URL}/api/auth/me`, {
       method: "GET",
       headers: {
-        "Cookie": cookieHeader,
-        // Remove unnecessary headers for GET requests
+        "Cookie": cookieHeader,  // Remove unnecessary header for get request
       },
       credentials: 'include',
       signal: controller.signal, // Add timeout protection

@@ -126,7 +126,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         colors: params.colors?.join(","),
         brands: params.brands?.join(","),
       };
-
+console.log("Fetching started for the client products .")
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-client-products`,
         {
@@ -134,7 +134,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
           withCredentials: true,
         }
       );
-
+console.log(`Response client-products-fetching ${response}`)
       set({
         products: response.data.products,
         currentPage: response.data.currentPage,
