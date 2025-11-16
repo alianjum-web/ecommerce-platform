@@ -51,9 +51,9 @@ function ProductForm() {
           setFormState({
             name: product.name,
             brand: product.brand,
-            description: product.description,
+            description: product.description ?? "",
             category: product.category,
-            gender: product.gender,
+            gender: product.gender ?? "",
             price: product.price.toString(),
             stock: product.stock.toString(),
           });
