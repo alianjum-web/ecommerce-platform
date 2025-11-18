@@ -1,4 +1,3 @@
-// src/store/useAuthStore.ts - SEPARATE FILE
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -24,6 +23,7 @@ type AuthStore = {
   triggerRedirect: () => void;
 };
 
+// ✅ FIX: Add leading slash for proper API routing
 const getBaseURL = () => '/api/auth';
 
 console.log("🔧 Environment:", process.env.NODE_ENV);
@@ -93,12 +93,12 @@ export const useAuthStore = create<AuthStore>()(
           if (response.data.success && response.data.user) {
             console.log("🎯 Login SUCCESS - User data:", response.data.user);
             
-            set((state) => ({
-              ...state,
-              isLoading: false,
-              user: response.data.user,
-              error: null
-            }));
+            // ✅ FIX: Use regular set instead of functional update for better state persistence
+            set({ 
+              isLoading: false, 
+              user: response.data.user, 
+              error: null 
+            });
 
             if (process.env.NODE_ENV === 'development') {
               setTimeout(() => {

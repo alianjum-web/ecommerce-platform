@@ -13,7 +13,6 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { DebugAuth } from "@/components/debug/DebugAuth";
 
-// ✅ CORRECT: Only the page component should be here
 function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
@@ -25,22 +24,21 @@ function LoginPage() {
   const { login, isLoading, user, error, triggerRedirect } = useAuthStore();
   const router = useRouter();
 
-  // ✅ IMPROVED redirect handler with development safeguards
+  // ✅ FIX: Improved redirect with better state handling
   useEffect(() => {
-    console.log("🔄 useEffect triggered - user:", user, "redirecting:", isRedirecting);
+    console.log("🔄 Redirect useEffect - user:", user, "redirecting:", isRedirecting);
     
     if (user && !isRedirecting) {
-      console.log("🎯 REDIRECT CONDITION MET - Starting redirect...");
+      console.log("🎯 REDIRECT CONDITION MET - User:", user.email);
       setIsRedirecting(true);
       
-      // Use a small delay to ensure state is fully persisted
       const redirectTimer = setTimeout(() => {
         const targetPath = user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
         console.log("🚀 Redirecting to:", targetPath);
         
-        // Use replace instead of push
-        router.replace(targetPath);
-      }, 100);
+        // ✅ FIX: Use push instead of replace for better navigation
+        router.push(targetPath);
+      }, 200); // Increased delay for state persistence
       
       return () => clearTimeout(redirectTimer);
     }
@@ -50,12 +48,15 @@ function LoginPage() {
     event.preventDefault();
    
     console.log("🟡 Login form submitted");
-    console.log("🟡 Current store state:", { isLoading, user: useAuthStore.getState().user, error });
+    console.log("🟡 Form data:", formData);
 
     const success = await login(formData.email, formData.password);
 
     console.log("🟡 Login result:", success);
-    console.log("🟡 Store state after login:", useAuthStore.getState());
+    
+    // ✅ FIX: Get fresh state after login
+    const currentState = useAuthStore.getState();
+    console.log("🟡 Store state after login:", currentState);
 
     if (success) {
       toast({
@@ -63,15 +64,19 @@ function LoginPage() {
         description: "Redirecting to your dashboard...",
       });
       
-      // DEVELOPMENT: Add manual redirect option
+      // DEVELOPMENT: Force check after successful login
       if (process.env.NODE_ENV === 'development') {
         setTimeout(() => {
-          const currentUser = useAuthStore.getState().user;
-          if (currentUser && !isRedirecting) {
-            console.log("🔧 DEVELOPMENT: Manual redirect check");
-            console.log("🔧 Current user:", currentUser);
+          const updatedState = useAuthStore.getState();
+          console.log("🔧 DEVELOPMENT - State after timeout:", updatedState);
+          if (updatedState.user && !isRedirecting) {
+            console.log("🔧 DEVELOPMENT - User exists but redirect didn't trigger!");
+            // Force redirect
+            setIsRedirecting(true);
+            const targetPath = updatedState.user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
+            router.push(targetPath);
           }
-        }, 500);
+        }, 1000);
       }
     } else {
       toast({
@@ -83,12 +88,15 @@ function LoginPage() {
 
   // DEVELOPMENT: Add manual redirect button
   const handleManualRedirect = () => {
-    triggerRedirect();
     const currentUser = useAuthStore.getState().user;
     if (currentUser) {
+      console.log("🔧 Manual redirect for:", currentUser.email);
+      setIsRedirecting(true);
+      const targetPath = currentUser.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
+      router.push(targetPath);
       toast({
         title: "Manual redirect triggered!",
-        description: `Redirecting ${currentUser.email} to ${currentUser.role === "SUPER_ADMIN" ? "super-admin" : "home"}`,
+        description: `Redirecting ${currentUser.email}`,
       });
     } else {
       toast({
@@ -180,7 +188,6 @@ function LoginPage() {
   );
 }
 
-// ✅ CORRECT: Only export the page component
 export default LoginPage;
   // const handleSubmit = async (event: React.FormEvent) => {
   //   event.preventDefault();
