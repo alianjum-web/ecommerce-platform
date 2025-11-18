@@ -57,21 +57,28 @@ function LoginPage() {
     //   return;
     // }
 
-    const success = await login(formData.email, formData.password);
+      // Temporary debug
+  console.log("🟡 Login form submitted");
+  console.log("🟡 Form data:", formData);
+  console.log("🟡 Current store state:", { isLoading, user, error });
 
-    if (success) {
-      toast({
-        title: "Login Successful!",
-      });
-      // The useEffect will handle the redirect when user state updates
-    } else {
-      // Use the current error from store (already in state)
-      toast({
-        title: error || "Login failed",
-        variant: "destructive",
-      });
-    }
-  };
+  const success = await login(formData.email, formData.password);
+
+  console.log("🟡 Login result:", success);
+  console.log("🟡 Store state after login:", useAuthStore.getState());
+
+  if (success) {
+    toast({
+      title: "Login Successful!",
+    });
+  } else {
+    toast({
+      title: error || "Login failed",
+      variant: "destructive",
+    });
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">

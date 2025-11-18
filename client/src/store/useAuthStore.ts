@@ -22,13 +22,22 @@ type AuthStore = {
   clearError: () => void;
 };
 
+// ✅ FIXED: Proper base URL configuration
 const getBaseURL = () => {
-  return process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:4001/api/auth'
-    : 'api/auth';
+  if (typeof window === 'undefined') {
+    // Server-side: use absolute URL
+    return process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:4001/api/auth'
+      : `${process.env.NEXT_PUBLIC_API_URL|| ''}/api/auth`;
+  } else {
+    // Client-side: use relative URL to your Next.js API routes
+    return '/api/auth';
+  }
 };
-console.log("getBaseURL in production:", getBaseURL);
-// Create axios instance WITHOUT interceptor first
+
+console.log("Base URL:", getBaseURL());
+
+// Create axios instance
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
@@ -50,7 +59,7 @@ export const useAuthStore = create<AuthStore>()(
           const response = await axiosInstance.post("/register", { name, email, password });
           set({ isLoading: false });
           return response.data.userId;
-        } catch (error) {
+        } catch (error: any) {
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || "Registration failed"
             : "Registration failed";
@@ -63,6 +72,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           console.log("🔄 Login attempt started");
+          console.log("Making request to:", `${axiosInstance.defaults.baseURL}/login`);
           
           const response = await axiosInstance.post("/login", { email, password });
           console.log("✅ Login response:", response.data);
@@ -77,6 +87,13 @@ export const useAuthStore = create<AuthStore>()(
           }
         } catch (error: any) {
           console.error("❌ Login error:", error);
+          console.error("Error details:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            url: error.config?.url
+          });
+          
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
             : "Login failed";
@@ -90,9 +107,8 @@ export const useAuthStore = create<AuthStore>()(
         try {
           await axiosInstance.post("/logout");
         } catch (error) {
-          // Ignore API errors during logout
+          console.error("Logout error:", error);
         } finally {
-          // Always clear local state
           set({ user: null, isLoading: false, error: null });
         }
       },
@@ -134,19 +150,20 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// ✅ NOW add the interceptor AFTER the store is created
+// Add interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401 && !error.config._retry) {
-      error.config._retry = true;
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
       
       try {
         const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
         
         if (refreshSuccess) {
-          // Retry the original request with new token
-          return axiosInstance(error.config);
+          return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
         console.error("Token refresh in interceptor failed:", refreshError);
