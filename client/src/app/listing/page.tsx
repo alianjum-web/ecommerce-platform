@@ -83,7 +83,35 @@ function ProductListingPage() {
     }
   }, [error]);
 
+// Add this inside your ProductListingPage component, before the return statement
+const DebugInfo = () => {
+  const { products, isLoading, error, currentPage, totalPages, totalProducts } = useProductStore();
+  
+  console.log("🛠️ DEBUG - Current State:", {
+    products,
+    productsLength: products?.length,
+    isLoading,
+    error,
+    currentPage,
+    totalPages,
+    totalProducts
+  });
+
   return (
+    <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg text-xs z-50 opacity-80">
+      <div>🛠️ DEBUG INFO:</div>
+      <div>Products: {products?.length || 0}</div>
+      <div>Loading: {isLoading.toString()}</div>
+      <div>Error: {error || 'none'}</div>
+      <div>Page: {currentPage}/{totalPages}</div>
+      <div>Total: {totalProducts}</div>
+    </div>
+  );
+};
+
+
+  return (
+    <div>
     <div className="min-h-screen bg-white">
       <div className="relative h-[300px] overflow-hidden">
         <img
@@ -172,6 +200,8 @@ function ProductListingPage() {
         </div>
       </div>
     </div>
+     <DebugInfo />
+     </div>
   );
 }
 
