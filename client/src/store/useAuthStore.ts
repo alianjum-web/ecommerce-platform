@@ -29,7 +29,8 @@ const getBaseURL = () => {
 };
 
 const axiosInstance = axios.create({
-  baseURL: getBaseURL(),
+  // baseURL: getBaseURL(),
+  baseURL: `${process.env.BACKEND_URL}/api/auth`,
   withCredentials: true,
   timeout: 10000,
 });
