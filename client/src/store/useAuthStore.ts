@@ -1,4 +1,4 @@
-// store/useAuthStore.ts - FIXED VERSION
+// store/useAuthStore.ts - ENHANCED WITH DEV FIXES
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -20,29 +20,51 @@ type AuthStore = {
   refreshAccessToken: () => Promise<boolean>;
   fetchMe: () => Promise<User | null>;
   clearError: () => void;
+  initialize: () => Promise<void>; // NEW: Initialize auth state
 };
 
-// ✅ FIXED: Proper base URL configuration
+// ✅ DEVELOPMENT FIX: Handle different environments properly
 const getBaseURL = () => {
-  // if (typeof window === 'undefined') {
-  //   // Server-side: use absolute URL
-  //   return process.env.NODE_ENV === 'development' 
-  //     ? `${process.env.DEVE_URL}/api/auth`
-  //     : `${process.env.NEXT_PUBLIC_API_URL|| ''}/api/auth`;
-  // } else {
-    // Client-side: use relative URL to your Next.js API routes
+  // In development, we need to be more careful with API routes
+  if (process.env.NODE_ENV === 'development') {
+    // For client-side in dev, use relative path
     return '/api/auth';
-  // }
+  }
+  // For production, always use relative path
+  return '/api/auth';
 };
 
-console.log("Base URL:", getBaseURL());
+console.log("🔧 Environment:", process.env.NODE_ENV);
+console.log("🔧 Base URL:", getBaseURL());
 
-// Create axios instance
+// Create axios instance with development-specific config
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
-  timeout: 10000,
+  timeout: 15000, // Increased timeout for dev
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
+
+// Add request interceptor for debugging
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🚀 API Request:", {
+        url: config.url,
+        method: config.method,
+        baseURL: config.baseURL,
+        withCredentials: config.withCredentials
+      });
+    }
+    return config;
+  },
+  (error) => {
+    console.error("🚀 API Request Error:", error);
+    return Promise.reject(error);
+  }
+);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -52,6 +74,23 @@ export const useAuthStore = create<AuthStore>()(
       error: null,
 
       clearError: () => set({ error: null }),
+
+      // NEW: Initialize auth state on app start
+      initialize: async () => {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        try {
+          console.log("🔧 Initializing auth state...");
+          const user = await get().fetchMe();
+          if (user) {
+            console.log("🔧 User found on initialization:", user);
+            set({ user });
+          }
+        } catch (error) {
+          console.log("🔧 No authenticated user found on initialization");
+        }
+      },
 
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
@@ -72,27 +111,49 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           console.log("🔄 Login attempt started");
-          console.log("Making request to:", `${axiosInstance.defaults.baseURL}/login`);
+          console.log("📡 Full URL:", `${axiosInstance.defaults.baseURL}/login`);
           
           const response = await axiosInstance.post("/login", { email, password });
-          console.log("✅ Login response:", response.data);
+          console.log("✅ Login API response received");
 
           if (response.data.success && response.data.user) {
-            set({ isLoading: false, user: response.data.user, error: null });
+            console.log("🎯 Login successful, user:", response.data.user);
+            
+            // IMPORTANT: Set state and wait for it to complete
+            set({ 
+              isLoading: false, 
+              user: response.data.user, 
+              error: null 
+            });
+
+            // Development fix: Force state persistence
+            if (process.env.NODE_ENV === 'development') {
+              setTimeout(() => {
+                console.log("🔍 Post-login state verification:", get().user);
+              }, 100);
+            }
+
             return true;
           } else {
             const errorMsg = response.data.error || "Login failed";
+            console.log("❌ Login failed with message:", errorMsg);
             set({ isLoading: false, error: errorMsg });
             return false;
           }
         } catch (error: any) {
-          console.error("❌ Login error:", error);
-          console.error("Error details:", {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status,
-            url: error.config?.url
-          });
+          console.error("💥 Login error:", error);
+          
+          // Enhanced error logging for development
+          if (process.env.NODE_ENV === 'development') {
+            console.error("🔍 Development Error Details:", {
+              message: error.message,
+              code: error.code,
+              response: error.response?.data,
+              status: error.response?.status,
+              url: error.config?.url,
+              baseURL: error.config?.baseURL
+            });
+          }
           
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
@@ -109,6 +170,7 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
+          console.log("🚪 Clearing local auth state");
           set({ user: null, isLoading: false, error: null });
         }
       },
@@ -131,14 +193,17 @@ export const useAuthStore = create<AuthStore>()(
 
       fetchMe: async () => {
         try {
+          console.log("👤 Fetching user data...");
           const res = await axiosInstance.get("/me");
+          console.log("👤 User data response:", res.data);
+          
           if (res.data.user) {
             set({ user: res.data.user, error: null });
             return res.data.user;
           }
           return null;
-        } catch (error) {
-          console.error("Fetch me failed:", error);
+        } catch (error: any) {
+          console.error("❌ Fetch me failed:", error.message);
           return null;
         }
       },
@@ -146,27 +211,47 @@ export const useAuthStore = create<AuthStore>()(
     {
       name: "auth-storage",
       partialize: (state) => ({ user: state.user }),
+      // Development-specific persistence config
+      onRehydrateStorage: () => {
+        console.log("🔧 Auth store rehydrated");
+        return (state, error) => {
+          if (error) {
+            console.error("❌ Auth store rehydration error:", error);
+          } else {
+            console.log("✅ Auth store rehydrated successfully");
+          }
+        };
+      }
     }
   )
 );
 
-// Add interceptor
+// Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("✅ API Success:", response.config.url, response.status);
+    }
+    return response;
+  },
   async (error) => {
+    console.error("❌ API Error:", error.config?.url, error.response?.status);
+    
     const originalRequest = error.config;
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      console.log("🔄 Attempting auto-refresh for 401 error");
       
       try {
         const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
         
         if (refreshSuccess) {
+          console.log("✅ Token refreshed, retrying request");
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        console.error("Token refresh in interceptor failed:", refreshError);
+        console.error("❌ Token refresh in interceptor failed:", refreshError);
         useAuthStore.getState().logout();
       }
     }
