@@ -7,20 +7,33 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { protectSignInAction } from "@/actions/auth";
 
 function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
   const { toast } = useToast();
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, user, error } = useAuthStore();
   const router = useRouter();
+
+  // ✅ Handle redirect AFTER state update
+  useEffect(() => {
+    if (user && !isRedirecting) {
+      setIsRedirecting(true);
+      if (user.role === "SUPER_ADMIN") {
+        router.push("/super-admin");
+      } else {
+        router.push("/home");
+      }
+    }
+  }, [user, isRedirecting, router]);
 
   const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -31,7 +44,8 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // const checkFirstLevelOfValidation = await protectSignInAction(
+
+    //     const checkFirstLevelOfValidation = await protectSignInAction(
     //   formData.email
     // );
 
@@ -42,28 +56,23 @@ function LoginPage() {
     //   });
     //   return;
     // }
+
     const success = await login(formData.email, formData.password);
+
     if (success) {
       toast({
         title: "Login Successful!",
       });
-
-      // Use the user from the store directly
-      const { user } = useAuthStore.getState();
-      if (user?.role === "SUPER_ADMIN") {
-        router.push("/super-admin");
-      } else {
-        router.push("/home");
-      }
+      // The useEffect will handle the redirect when user state updates
     } else {
-      // Show the actual error from the store
-      const { error } = useAuthStore.getState();
+      // Use the current error from store (already in state)
       toast({
         title: error || "Login failed",
         variant: "destructive",
       });
     }
   };
+
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">
       <div className="hidden lg:block w-1/2 bg-[#ffede1] relative overflow-hidden">
@@ -93,6 +102,7 @@ function LoginPage() {
                 required
                 value={formData.email}
                 onChange={handleOnChange}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-1">
@@ -107,13 +117,15 @@ function LoginPage() {
                 required
                 value={formData.password}
                 onChange={handleOnChange}
+                disabled={isLoading}
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-black text-white hover:bg-black transition-colors"
+              disabled={isLoading}
             >
-              LOGIN
+              {isLoading ? "LOGGING IN..." : "LOGIN"}
             </Button>
             <p className="text-center text-[#3f3d56] text-sm">
               New here{" "}
