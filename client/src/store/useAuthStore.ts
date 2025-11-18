@@ -1,4 +1,4 @@
-// store/useAuthStore.ts - UPDATED WITH DEV PERSISTENCE FIX
+// src/store/useAuthStore.ts - SEPARATE FILE
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -21,7 +21,6 @@ type AuthStore = {
   fetchMe: () => Promise<User | null>;
   clearError: () => void;
   initialize: () => Promise<void>;
-  // NEW: Manual redirect trigger for development
   triggerRedirect: () => void;
 };
 
@@ -45,12 +44,10 @@ export const useAuthStore = create<AuthStore>()(
 
       clearError: () => set({ error: null }),
 
-      // NEW: Manual redirect for development debugging
       triggerRedirect: () => {
         const user = get().user;
         if (user) {
           console.log("🔧 MANUAL REDIRECT TRIGGERED for user:", user);
-          // This will help us test if redirect works when we force it
           return user;
         }
         return null;
@@ -96,7 +93,6 @@ export const useAuthStore = create<AuthStore>()(
           if (response.data.success && response.data.user) {
             console.log("🎯 Login SUCCESS - User data:", response.data.user);
             
-            // CRITICAL FIX: Use functional update and ensure persistence
             set((state) => ({
               ...state,
               isLoading: false,
@@ -104,15 +100,12 @@ export const useAuthStore = create<AuthStore>()(
               error: null
             }));
 
-            // DEVELOPMENT FIX: Force immediate persistence and verification
             if (process.env.NODE_ENV === 'development') {
-              // Wait for state to update
               setTimeout(() => {
                 const currentState = get();
                 console.log("🔍 DEVELOPMENT - State after login:", currentState);
                 console.log("🔍 DEVELOPMENT - User in state:", currentState.user);
                 
-                // Force save to localStorage
                 const storage = localStorage.getItem('auth-storage');
                 console.log("🔍 DEVELOPMENT - Storage after login:", storage);
               }, 50);
@@ -174,7 +167,6 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({ 
         user: state.user 
       }),
-      // DEVELOPMENT CRITICAL: Better persistence config
       onRehydrateStorage: () => (state) => {
         console.log("🔄 Storage rehydrated:", state?.user);
       }

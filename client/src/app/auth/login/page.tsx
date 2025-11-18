@@ -11,12 +11,9 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import { DebugAuth } from "@/components/debug/DebugAuth";
 
-
- 
-
- 
-
+// ✅ CORRECT: Only the page component should be here
 function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
@@ -51,17 +48,7 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-   //     const checkFirstLevelOfValidation = await protectSignInAction(
-    //   formData.email
-    // );
-
-    // if (!checkFirstLevelOfValidation.success) {
-    //   toast({
-    //     title: checkFirstLevelOfValidation.error,
-    //     variant: "destructive",
-    //   });
-    //   return;
-    // }
+   
     console.log("🟡 Login form submitted");
     console.log("🟡 Current store state:", { isLoading, user: useAuthStore.getState().user, error });
 
@@ -96,11 +83,12 @@ function LoginPage() {
 
   // DEVELOPMENT: Add manual redirect button
   const handleManualRedirect = () => {
-    const user = triggerRedirect();
-    if (user) {
+    triggerRedirect();
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
       toast({
         title: "Manual redirect triggered!",
-        description: `Redirecting ${user.email} to ${user.role === "SUPER_ADMIN" ? "super-admin" : "home"}`,
+        description: `Redirecting ${currentUser.email} to ${currentUser.role === "SUPER_ADMIN" ? "super-admin" : "home"}`,
       });
     } else {
       toast({
@@ -191,3 +179,19 @@ function LoginPage() {
     </div>
   );
 }
+
+// ✅ CORRECT: Only export the page component
+export default LoginPage;
+  // const handleSubmit = async (event: React.FormEvent) => {
+  //   event.preventDefault();
+  //  //     const checkFirstLevelOfValidation = await protectSignInAction(
+  //   //   formData.email
+  //   // );
+
+  //   // if (!checkFirstLevelOfValidation.success) {
+  //   //   toast({
+  //   //     title: checkFirstLevelOfValidation.error,
+  //   //     variant: "destructive",
+  //   //   });
+  //   //   return;
+  //   // }
