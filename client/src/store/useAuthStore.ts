@@ -27,7 +27,7 @@ const getBaseURL = () => {
     ? 'http://localhost:4001/api/auth'
     : 'api/auth';
 };
-
+console.log("getBaseURL in production:", getBaseURL);
 // Create axios instance WITHOUT interceptor first
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
