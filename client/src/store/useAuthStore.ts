@@ -24,15 +24,15 @@ type AuthStore = {
 
 // ✅ FIXED: Proper base URL configuration
 const getBaseURL = () => {
-  if (typeof window === 'undefined') {
-    // Server-side: use absolute URL
-    return process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:4001/api/auth'
-      : `${process.env.NEXT_PUBLIC_API_URL|| ''}/api/auth`;
-  } else {
+  // if (typeof window === 'undefined') {
+  //   // Server-side: use absolute URL
+  //   return process.env.NODE_ENV === 'development' 
+  //     ? `${process.env.DEVE_URL}/api/auth`
+  //     : `${process.env.NEXT_PUBLIC_API_URL|| ''}/api/auth`;
+  // } else {
     // Client-side: use relative URL to your Next.js API routes
     return '/api/auth';
-  }
+  // }
 };
 
 console.log("Base URL:", getBaseURL());

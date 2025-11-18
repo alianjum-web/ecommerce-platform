@@ -23,6 +23,10 @@ function LoginPage() {
   const { login, isLoading, user, error } = useAuthStore();
   const router = useRouter();
 
+  // if (process.env.NODE_ENV === "development") {
+  //   const { user } = useAuthStore.getState();
+  // }
+  
   // ✅ Handle redirect AFTER state update
   useEffect(() => {
     if (user && !isRedirecting) {
@@ -57,15 +61,7 @@ function LoginPage() {
     //   return;
     // }
 
-      // Temporary debug
-  console.log("🟡 Login form submitted");
-  console.log("🟡 Form data:", formData);
-  console.log("🟡 Current store state:", { isLoading, user, error });
-
   const success = await login(formData.email, formData.password);
-
-  console.log("🟡 Login result:", success);
-  console.log("🟡 Store state after login:", useAuthStore.getState());
 
   if (success) {
     toast({

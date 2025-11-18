@@ -11,7 +11,7 @@ const ERROR_MESSAGES = {
 const TIMEOUT_MS = 8000; // 8 seconds for token refresh
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.DEV_BACKEND_PORT}`;
+  const BACKEND_URL =  process.env.BACKEND_URL || process.env.DEVE_URL;
 
   if (!BACKEND_URL) {
     console.error("Configuration error: BACKEND_URL not set for refresh token");

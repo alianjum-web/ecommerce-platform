@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.DEV_BACKEND_PORT}`;
+  const BACKEND_URL =  process.env.BACKEND_URL || process.env.DEVE_URL;
   
   // Early return for missing config
   if (!BACKEND_URL) {
