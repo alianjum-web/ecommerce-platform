@@ -12,6 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 
+
+ 
+
+ 
+
 function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
@@ -20,36 +25,33 @@ function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const { toast } = useToast();
-  const { login, isLoading, user, error } = useAuthStore();
+  const { login, isLoading, user, error, triggerRedirect } = useAuthStore();
   const router = useRouter();
 
-  // if (process.env.NODE_ENV === "development") {
-  //   const { user } = useAuthStore.getState();
-  // }
-  
-  // ✅ Handle redirect AFTER state update
+  // ✅ IMPROVED redirect handler with development safeguards
   useEffect(() => {
+    console.log("🔄 useEffect triggered - user:", user, "redirecting:", isRedirecting);
+    
     if (user && !isRedirecting) {
+      console.log("🎯 REDIRECT CONDITION MET - Starting redirect...");
       setIsRedirecting(true);
-      if (user.role === "SUPER_ADMIN") {
-        router.push("/super-admin");
-      } else {
-        router.push("/home");
-      }
+      
+      // Use a small delay to ensure state is fully persisted
+      const redirectTimer = setTimeout(() => {
+        const targetPath = user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
+        console.log("🚀 Redirecting to:", targetPath);
+        
+        // Use replace instead of push
+        router.replace(targetPath);
+      }, 100);
+      
+      return () => clearTimeout(redirectTimer);
     }
   }, [user, isRedirecting, router]);
 
-  const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [event.target.name]: event.target.value,
-    }));
-  };
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    //     const checkFirstLevelOfValidation = await protectSignInAction(
+   //     const checkFirstLevelOfValidation = await protectSignInAction(
     //   formData.email
     // );
 
@@ -60,24 +62,68 @@ function LoginPage() {
     //   });
     //   return;
     // }
+    console.log("🟡 Login form submitted");
+    console.log("🟡 Current store state:", { isLoading, user: useAuthStore.getState().user, error });
 
-  const success = await login(formData.email, formData.password);
+    const success = await login(formData.email, formData.password);
 
-  if (success) {
-    toast({
-      title: "Login Successful!",
-    });
-  } else {
-    toast({
-      title: error || "Login failed",
-      variant: "destructive",
-    });
-  }
-};
+    console.log("🟡 Login result:", success);
+    console.log("🟡 Store state after login:", useAuthStore.getState());
 
+    if (success) {
+      toast({
+        title: "Login Successful!",
+        description: "Redirecting to your dashboard...",
+      });
+      
+      // DEVELOPMENT: Add manual redirect option
+      if (process.env.NODE_ENV === 'development') {
+        setTimeout(() => {
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && !isRedirecting) {
+            console.log("🔧 DEVELOPMENT: Manual redirect check");
+            console.log("🔧 Current user:", currentUser);
+          }
+        }, 500);
+      }
+    } else {
+      toast({
+        title: error || "Login failed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // DEVELOPMENT: Add manual redirect button
+  const handleManualRedirect = () => {
+    const user = triggerRedirect();
+    if (user) {
+      toast({
+        title: "Manual redirect triggered!",
+        description: `Redirecting ${user.email} to ${user.role === "SUPER_ADMIN" ? "super-admin" : "home"}`,
+      });
+    } else {
+      toast({
+        title: "No user found for redirect",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">
+      <DebugAuth />
+      
+      {/* DEVELOPMENT: Manual redirect button */}
+      {process.env.NODE_ENV === 'development' && (
+        <button 
+          onClick={handleManualRedirect}
+          className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded z-50"
+        >
+          🔧 Manual Redirect
+        </button>
+      )}
+      
       <div className="hidden lg:block w-1/2 bg-[#ffede1] relative overflow-hidden">
         <Image
           src={banner}
@@ -104,7 +150,7 @@ function LoginPage() {
                 placeholder="Enter your email"
                 required
                 value={formData.email}
-                onChange={handleOnChange}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 disabled={isLoading}
               />
             </div>
@@ -119,7 +165,7 @@ function LoginPage() {
                 placeholder="Enter your password"
                 required
                 value={formData.password}
-                onChange={handleOnChange}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 disabled={isLoading}
               />
             </div>
@@ -145,5 +191,3 @@ function LoginPage() {
     </div>
   );
 }
-
-export default LoginPage;

@@ -1,4 +1,4 @@
-// store/useAuthStore.ts - ENHANCED WITH DEV FIXES
+// store/useAuthStore.ts - UPDATED WITH DEV PERSISTENCE FIX
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -20,51 +20,21 @@ type AuthStore = {
   refreshAccessToken: () => Promise<boolean>;
   fetchMe: () => Promise<User | null>;
   clearError: () => void;
-  initialize: () => Promise<void>; // NEW: Initialize auth state
+  initialize: () => Promise<void>;
+  // NEW: Manual redirect trigger for development
+  triggerRedirect: () => void;
 };
 
-// ✅ DEVELOPMENT FIX: Handle different environments properly
-const getBaseURL = () => {
-  // In development, we need to be more careful with API routes
-  if (process.env.NODE_ENV === 'development') {
-    // For client-side in dev, use relative path
-    return '/api/auth';
-  }
-  // For production, always use relative path
-  return '/api/auth';
-};
+const getBaseURL = () => '/api/auth';
 
 console.log("🔧 Environment:", process.env.NODE_ENV);
-console.log("🔧 Base URL:", getBaseURL());
 
-// Create axios instance with development-specific config
+// Create axios instance
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
-  timeout: 15000, // Increased timeout for dev
-  headers: {
-    'Content-Type': 'application/json',
-  }
+  timeout: 15000,
 });
-
-// Add request interceptor for debugging
-axiosInstance.interceptors.request.use(
-  (config) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("🚀 API Request:", {
-        url: config.url,
-        method: config.method,
-        baseURL: config.baseURL,
-        withCredentials: config.withCredentials
-      });
-    }
-    return config;
-  },
-  (error) => {
-    console.error("🚀 API Request Error:", error);
-    return Promise.reject(error);
-  }
-);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -75,11 +45,19 @@ export const useAuthStore = create<AuthStore>()(
 
       clearError: () => set({ error: null }),
 
-      // NEW: Initialize auth state on app start
+      // NEW: Manual redirect for development debugging
+      triggerRedirect: () => {
+        const user = get().user;
+        if (user) {
+          console.log("🔧 MANUAL REDIRECT TRIGGERED for user:", user);
+          // This will help us test if redirect works when we force it
+          return user;
+        }
+        return null;
+      },
+
       initialize: async () => {
-        // Only run on client side
         if (typeof window === 'undefined') return;
-        
         try {
           console.log("🔧 Initializing auth state...");
           const user = await get().fetchMe();
@@ -88,7 +66,7 @@ export const useAuthStore = create<AuthStore>()(
             set({ user });
           }
         } catch (error) {
-          console.log("🔧 No authenticated user found on initialization");
+          console.log("🔧 No authenticated user found");
         }
       },
 
@@ -111,50 +89,43 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           console.log("🔄 Login attempt started");
-          console.log("📡 Full URL:", `${axiosInstance.defaults.baseURL}/login`);
           
           const response = await axiosInstance.post("/login", { email, password });
-          console.log("✅ Login API response received");
+          console.log("✅ Login API response:", response.data);
 
           if (response.data.success && response.data.user) {
-            console.log("🎯 Login successful, user:", response.data.user);
+            console.log("🎯 Login SUCCESS - User data:", response.data.user);
             
-            // IMPORTANT: Set state and wait for it to complete
-            set({ 
-              isLoading: false, 
-              user: response.data.user, 
-              error: null 
-            });
+            // CRITICAL FIX: Use functional update and ensure persistence
+            set((state) => ({
+              ...state,
+              isLoading: false,
+              user: response.data.user,
+              error: null
+            }));
 
-            // Development fix: Force state persistence
+            // DEVELOPMENT FIX: Force immediate persistence and verification
             if (process.env.NODE_ENV === 'development') {
+              // Wait for state to update
               setTimeout(() => {
-                console.log("🔍 Post-login state verification:", get().user);
-              }, 100);
+                const currentState = get();
+                console.log("🔍 DEVELOPMENT - State after login:", currentState);
+                console.log("🔍 DEVELOPMENT - User in state:", currentState.user);
+                
+                // Force save to localStorage
+                const storage = localStorage.getItem('auth-storage');
+                console.log("🔍 DEVELOPMENT - Storage after login:", storage);
+              }, 50);
             }
 
             return true;
           } else {
             const errorMsg = response.data.error || "Login failed";
-            console.log("❌ Login failed with message:", errorMsg);
             set({ isLoading: false, error: errorMsg });
             return false;
           }
         } catch (error: any) {
-          console.error("💥 Login error:", error);
-          
-          // Enhanced error logging for development
-          if (process.env.NODE_ENV === 'development') {
-            console.error("🔍 Development Error Details:", {
-              message: error.message,
-              code: error.code,
-              response: error.response?.data,
-              status: error.response?.status,
-              url: error.config?.url,
-              baseURL: error.config?.baseURL
-            });
-          }
-          
+          console.error("❌ Login error:", error);
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
             : "Login failed";
@@ -170,21 +141,14 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
-          console.log("🚪 Clearing local auth state");
           set({ user: null, isLoading: false, error: null });
         }
       },
 
       refreshAccessToken: async () => {
         try {
-          console.log("🔄 Attempting token refresh...");
           const res = await axiosInstance.post("/refresh-token");
-          
-          if (res.data.success) {
-            console.log("✅ Token refresh successful");
-            return true;
-          }
-          return false;
+          return res.data.success;
         } catch (e) {
           console.error("❌ Token refresh failed:", e);
           return false;
@@ -193,34 +157,26 @@ export const useAuthStore = create<AuthStore>()(
 
       fetchMe: async () => {
         try {
-          console.log("👤 Fetching user data...");
           const res = await axiosInstance.get("/me");
-          console.log("👤 User data response:", res.data);
-          
           if (res.data.user) {
             set({ user: res.data.user, error: null });
             return res.data.user;
           }
           return null;
-        } catch (error: any) {
-          console.error("❌ Fetch me failed:", error.message);
+        } catch (error) {
+          console.error("Fetch me failed:", error);
           return null;
         }
       },
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({ user: state.user }),
-      // Development-specific persistence config
-      onRehydrateStorage: () => {
-        console.log("🔧 Auth store rehydrated");
-        return (state, error) => {
-          if (error) {
-            console.error("❌ Auth store rehydration error:", error);
-          } else {
-            console.log("✅ Auth store rehydrated successfully");
-          }
-        };
+      partialize: (state) => ({ 
+        user: state.user 
+      }),
+      // DEVELOPMENT CRITICAL: Better persistence config
+      onRehydrateStorage: () => (state) => {
+        console.log("🔄 Storage rehydrated:", state?.user);
       }
     }
   )
@@ -228,30 +184,15 @@ export const useAuthStore = create<AuthStore>()(
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("✅ API Success:", response.config.url, response.status);
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error("❌ API Error:", error.config?.url, error.response?.status);
-    
     const originalRequest = error.config;
-    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log("🔄 Attempting auto-refresh for 401 error");
-      
       try {
         const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
-        
-        if (refreshSuccess) {
-          console.log("✅ Token refreshed, retrying request");
-          return axiosInstance(originalRequest);
-        }
-      } catch (refreshError) {
-        console.error("❌ Token refresh in interceptor failed:", refreshError);
+        if (refreshSuccess) return axiosInstance(originalRequest);
+      } catch {
         useAuthStore.getState().logout();
       }
     }
