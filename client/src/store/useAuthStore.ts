@@ -1,4 +1,4 @@
-// store/useAuthStore.ts - ENHANCED VERSION
+// store/useAuthStore.ts - FIXED VERSION
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -25,40 +25,15 @@ type AuthStore = {
 const getBaseURL = () => {
   return process.env.NODE_ENV === 'development' 
     ? 'http://localhost:4001/api/auth'
-    :  'api/auth' // redirect to proxy app/api/auth  so frontend <--> Proxy(cookie-set) <--> Backend 
+    : 'api/auth';
 };
 
+// Create axios instance WITHOUT interceptor first
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
-  // baseURL: `${process.env.BACKEND_URL}/api/auth`,
   withCredentials: true,
   timeout: 10000,
 });
-
-// Add response interceptor for automatic token refresh
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401 && !error.config._retry) {
-      error.config._retry = true;
-      
-      const authStore = useAuthStore.getState();
-      
-      try {
-        const refreshSuccess = await authStore.refreshAccessToken();
-        
-        if (refreshSuccess) {
-          // Retry the original request with new token
-          return axiosInstance(error.config);
-        }
-      } catch (refreshError) {
-        console.error("Token refresh in interceptor failed:", refreshError);
-        authStore.logout();
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -114,9 +89,10 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           await axiosInstance.post("/logout");
-          set({ user: null, isLoading: false, error: null });
         } catch (error) {
-          // Even if logout API fails, clear local state
+          // Ignore API errors during logout
+        } finally {
+          // Always clear local state
           set({ user: null, isLoading: false, error: null });
         }
       },
@@ -128,14 +104,11 @@ export const useAuthStore = create<AuthStore>()(
           
           if (res.data.success) {
             console.log("✅ Token refresh successful");
-            // Fetch fresh user data after token refresh
-            await get().fetchMe();
             return true;
           }
           return false;
         } catch (e) {
           console.error("❌ Token refresh failed:", e);
-          // Don't clear user immediately - let the interceptor handle it
           return false;
         }
       },
@@ -150,7 +123,6 @@ export const useAuthStore = create<AuthStore>()(
           return null;
         } catch (error) {
           console.error("Fetch me failed:", error);
-          // Don't clear user on fetch failure - might be temporary
           return null;
         }
       },
@@ -160,4 +132,27 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({ user: state.user }),
     }
   )
+);
+
+// ✅ NOW add the interceptor AFTER the store is created
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true;
+      
+      try {
+        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        
+        if (refreshSuccess) {
+          // Retry the original request with new token
+          return axiosInstance(error.config);
+        }
+      } catch (refreshError) {
+        console.error("Token refresh in interceptor failed:", refreshError);
+        useAuthStore.getState().logout();
+      }
+    }
+    return Promise.reject(error);
+  }
 );
