@@ -35,7 +35,7 @@ async function setTokens(
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("COOKIE_DOMAIN:", process.env.COOKIE_DOMAIN);
 console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
-
+console.log("Sending the tokens")
   // Access Token Cookie
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
