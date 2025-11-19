@@ -55,7 +55,7 @@ export function ProductFilters({
           ))}
         </div>
       </div>
-      
+
       <div>
         <h3 className="mb-3 font-semibold">Brands</h3>
         <div className="space-y-2">
@@ -73,7 +73,7 @@ export function ProductFilters({
           ))}
         </div>
       </div>
-      
+
       <div>
         <h3 className="mb-3 font-semibold">Size</h3>
         <div className="flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ export function ProductFilters({
           ))}
         </div>
       </div>
-      
+
       <div>
         <h3 className="mb-3 font-semibold">Colors</h3>
         <div className="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function ProductFilters({
           ))}
         </div>
       </div>
-      
+
       <div>
         <h3 className="mb-3 font-semibold">Price range</h3>
         <Slider
