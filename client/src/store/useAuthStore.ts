@@ -1,3 +1,4 @@
+// src/store/useAuthStore.ts - UPDATED
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -20,13 +21,10 @@ type AuthStore = {
   fetchMe: () => Promise<User | null>;
   clearError: () => void;
   initialize: () => Promise<void>;
-  triggerRedirect: () => void;
+  // REMOVED: triggerRedirect - not needed
 };
 
-// ✅ FIX: Add leading slash for proper API routing
 const getBaseURL = () => '/api/auth';
-
-console.log("🔧 Environment:", process.env.NODE_ENV);
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -43,15 +41,6 @@ export const useAuthStore = create<AuthStore>()(
       error: null,
 
       clearError: () => set({ error: null }),
-
-      triggerRedirect: () => {
-        const user = get().user;
-        if (user) {
-          console.log("🔧 MANUAL REDIRECT TRIGGERED for user:", user);
-          return user;
-        }
-        return null;
-      },
 
       initialize: async () => {
         if (typeof window === 'undefined') return;
@@ -88,27 +77,28 @@ export const useAuthStore = create<AuthStore>()(
           console.log("🔄 Login attempt started");
           
           const response = await axiosInstance.post("/login", { email, password });
-          console.log("✅ Login API response:", response.data);
+          console.log("✅ Login API response received");
 
           if (response.data.success && response.data.user) {
             console.log("🎯 Login SUCCESS - User data:", response.data.user);
             
-            // ✅ FIX: Use regular set instead of functional update for better state persistence
+            // ✅ CRITICAL FIX: Force immediate state update
             set({ 
               isLoading: false, 
               user: response.data.user, 
               error: null 
             });
 
-            if (process.env.NODE_ENV === 'development') {
+            // ✅ PRODUCTION FIX: Force persistence and state sync
+            if (typeof window !== 'undefined') {
+              // Force Zustand to persist immediately
               setTimeout(() => {
                 const currentState = get();
-                console.log("🔍 DEVELOPMENT - State after login:", currentState);
-                console.log("🔍 DEVELOPMENT - User in state:", currentState.user);
+                console.log("🔍 PRODUCTION - State after login:", currentState);
                 
-                const storage = localStorage.getItem('auth-storage');
-                console.log("🔍 DEVELOPMENT - Storage after login:", storage);
-              }, 50);
+                // Trigger storage event to sync across tabs
+                window.dispatchEvent(new Event('storage'));
+              }, 100);
             }
 
             return true;
@@ -167,6 +157,7 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({ 
         user: state.user 
       }),
+      // ✅ PRODUCTION FIX: Better persistence configuration
       onRehydrateStorage: () => (state) => {
         console.log("🔄 Storage rehydrated:", state?.user);
       }
