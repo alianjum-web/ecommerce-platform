@@ -31,8 +31,8 @@ export function ProductGrid({ products, isLoading, error }: ProductGridProps) {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">Error: {error}</p>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="mt-4"
           onClick={() => window.location.reload()}
         >
