@@ -24,9 +24,9 @@ async function setTokens(
 ) {
   // For cross-site (frontend <> api on different origins) use sameSite: "none" and secure:true in prod
   const isProd = process.env.NODE_ENV === "production";
-
+console.log("Checking the environemnt..", isProd)
     const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
-
+console.log("My DOMIAN", domain)
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: isProd,
@@ -111,7 +111,7 @@ console.log("ACCESS_TOKEN generating...")
       where: { id: extractCurrentUser.id },
       data: { refreshToken: hashed }, // ensure your prisma schema has refreshToken?: string | null
     });
-
+console.log("Token is setting ....")
     await setTokens(res, accessToken, refreshToken);
 
     res.status(200).json({
