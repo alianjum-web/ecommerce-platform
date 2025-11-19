@@ -22,29 +22,41 @@ async function setTokens(
   accessToken: string,
   refreshToken: string
 ) {
-  // For cross-site (frontend <> api on different origins) use sameSite: "none" and secure:true in prod
   const isProd = process.env.NODE_ENV === "production";
-console.log("Checking the environemnt..", isProd)
-    const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
-console.log("My DOMIAN", domain)
+  const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
+  
+  console.log("Cookie Configuration:", {
+    environment: isProd ? 'production' : 'development',
+    domain: domain,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax"
+  });
+  // Debug your environment
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("COOKIE_DOMAIN:", process.env.COOKIE_DOMAIN);
+console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
+  // Access Token Cookie
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax", // in prod: none, in dev lax is okay
-    maxAge: 60 * 60 * 1000, // 1 hour in ms
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 60 * 60 * 1000, // 1 hour
     path: "/",
-    domain: domain, // ✅ Add domain for production
+    domain: domain,
   });
 
+  // Refresh Token Cookie
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
-    // 7 days -> ms
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
-    domain: domain, // ✅ Add domain for production
+    domain: domain,
   });
+
+  console.log("Cookies set successfully");
 }
 
 const register = async (req: Request, res: Response): Promise<void> => {
@@ -86,7 +98,7 @@ const login = async (req: Request, res: Response): Promise<void> => {
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
-console.log("Extracted User", extractCurrentUser)
+    console.log("Extracted User", extractCurrentUser);
     if (
       !extractCurrentUser ||
       !(await bcrypt.compare(password, extractCurrentUser.password))
@@ -94,14 +106,14 @@ console.log("Extracted User", extractCurrentUser)
       res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
     }
-console.log("ACCESS_TOKEN generating...")
+    console.log("ACCESS_TOKEN generating...");
 
     const accessToken = signAccessToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
-    console.log("ACCESS_TOKEN generated", accessToken)
+    console.log("ACCESS_TOKEN generated", accessToken);
 
     const refreshToken = uuidv4();
     const hashed = hashToken(refreshToken);
@@ -111,8 +123,11 @@ console.log("ACCESS_TOKEN generating...")
       where: { id: extractCurrentUser.id },
       data: { refreshToken: hashed }, // ensure your prisma schema has refreshToken?: string | null
     });
-console.log("Token is setting ....")
+    console.log("Token is setting ....");
+        console.log("Before setting cookies - Headers:", Object.keys(res.getHeaders()));
+
     await setTokens(res, accessToken, refreshToken);
+    console.log("After setting cookies - Headers:", res.getHeaders()['set-cookie']);
 
     res.status(200).json({
       success: true,
@@ -213,15 +228,15 @@ const logout = async (req: Request, res: Response): Promise<void> => {
   const isProd = process.env.NODE_ENV === "production";
   const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
 
-  res.clearCookie("accessToken", { 
+  res.clearCookie("accessToken", {
     path: "/",
-    domain: domain 
+    domain: domain,
   });
-  res.clearCookie("refreshToken", { 
+  res.clearCookie("refreshToken", {
     path: "/",
-    domain: domain 
+    domain: domain,
   });
-  
+
   res.status(200).json({
     success: true,
     message: "User logged out successfully",
