@@ -1,4 +1,4 @@
-// src/app/auth/login/page.tsx - UPDATED
+// src/app/auth/login/page.tsx - SIMPLIFIED VERSION
 "use client";
 
 import Image from "next/image";
@@ -8,223 +8,149 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { DebugAuth } from "@/components/debug/DebugAuth";
+
+const ROUTES = {
+  SUPER_ADMIN: "/super-admin",
+  HOME: "/home",
+  REGISTER: "/auth/register",
+} as const;
 
 function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const redirectAttemptedRef = useRef(false); // ✅ Track redirect attempts
-
+  
   const { toast } = useToast();
   const { login, isLoading, user, error } = useAuthStore();
   const router = useRouter();
 
-  // ✅ IMPROVED: Multiple redirect strategies
+  // ✅ SIMPLIFIED: Single redirect effect
   useEffect(() => {
-    console.log("🔄 Redirect useEffect - user:", user, "redirecting:", isRedirecting);
-    
-    if (user && !isRedirecting && !redirectAttemptedRef.current) {
-      console.log("🎯 REDIRECT CONDITION MET - Starting redirect...");
-      setIsRedirecting(true);
-      redirectAttemptedRef.current = true;
-      
-      const targetPath = user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-      console.log("🚀 Redirecting to:", targetPath);
-      
-      // ✅ Strategy 1: Immediate redirect
+    if (user) {
+      console.log("🎯 User authenticated, redirecting...");
+      const targetPath = user.role === "SUPER_ADMIN" ? ROUTES.SUPER_ADMIN : ROUTES.HOME;
       router.push(targetPath);
-      
-      // ✅ Strategy 2: Fallback redirect after delay
-      const fallbackTimer = setTimeout(() => {
-        console.log("🔄 Fallback redirect triggered");
-        router.push(targetPath);
-      }, 1000);
-      
-      // ✅ Strategy 3: Force redirect with page reload as last resort
-      const forceTimer = setTimeout(() => {
-        console.log("🔄 Force redirect with reload");
-        window.location.href = targetPath;
-      }, 3000);
-      
-      return () => {
-        clearTimeout(fallbackTimer);
-        clearTimeout(forceTimer);
-      };
     }
-  }, [user, isRedirecting, router]);
+  }, [user, router]);
 
-  // ✅ NEW: Listen for storage events (Zustand persistence)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      console.log("📦 Storage changed, checking auth state...");
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser && !isRedirecting && !redirectAttemptedRef.current) {
-        console.log("📦 Storage event triggered redirect");
-        setIsRedirecting(true);
-        redirectAttemptedRef.current = true;
-        const targetPath = currentUser.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-        router.push(targetPath);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [isRedirecting, router]);
-
+  // ✅ SIMPLIFIED: Clean form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    redirectAttemptedRef.current = false; // Reset redirect attempt
-   
-    console.log("🟡 Login form submitted");
-    console.log("🟡 Form data:", formData);
-
-    const success = await login(formData.email, formData.password);
-
-    console.log("🟡 Login result:", success);
     
-    // ✅ Get fresh state immediately after login
-    const currentState = useAuthStore.getState();
-    console.log("🟡 Store state after login:", currentState);
-
-    if (success) {
+    // Basic validation
+    if (!formData.email || !formData.password) {
       toast({
-        title: "Login Successful!",
-        description: "Redirecting to your dashboard...",
+        title: "Validation Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
       });
-      
-      // ✅ PRODUCTION FIX: Multiple redirect strategies
-      setTimeout(() => {
-        const updatedState = useAuthStore.getState();
-        console.log("🔧 Post-login state check:", updatedState);
-        
-        if (updatedState.user && !isRedirecting && !redirectAttemptedRef.current) {
-          console.log("🔧 Manual redirect triggered");
-          setIsRedirecting(true);
-          redirectAttemptedRef.current = true;
-          const targetPath = updatedState.user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-          router.push(targetPath);
-        }
-      }, 500);
+      return;
+    }
 
-      // ✅ PRODUCTION FIX: Final fallback
-      setTimeout(() => {
-        if (!redirectAttemptedRef.current) {
-          console.log("🔧 Final fallback redirect");
-          const finalState = useAuthStore.getState();
-          if (finalState.user) {
-            setIsRedirecting(true);
-            redirectAttemptedRef.current = true;
-            const targetPath = finalState.user.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-            window.location.href = targetPath; // Force page navigation
-          }
-        }
-      }, 2000);
+    try {
+      const success = await login(formData.email, formData.password);
 
-    } else {
+      if (success) {
+        toast({
+          title: "Login Successful!",
+          description: "Redirecting to your dashboard...",
+        });
+        // Redirect will be handled by the useEffect above
+      } else {
+        throw new Error(error || "Login failed");
+      }
+    } catch (err) {
       toast({
-        title: error || "Login failed",
+        title: "Login Error",
+        description: err instanceof Error ? err.message : "An unexpected error occurred",
         variant: "destructive",
       });
     }
   };
 
-  // Manual redirect for debugging
-  const handleManualRedirect = () => {
-    const currentUser = useAuthStore.getState().user;
-    if (currentUser) {
-      console.log("🔧 Manual redirect for:", currentUser.email);
-      setIsRedirecting(true);
-      redirectAttemptedRef.current = true;
-      const targetPath = currentUser.role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-      router.push(targetPath);
-    } else {
-      toast({
-        title: "No user found for redirect",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleInputChange = (field: keyof typeof formData) => 
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData(prev => ({ 
+        ...prev, 
+        [field]: e.target.value 
+      }));
+    };
 
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">
-      <DebugAuth />
-      
-      {/* Manual redirect button for production debugging */}
-      {(process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') && (
-        <button 
-          onClick={handleManualRedirect}
-          className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded z-50"
-        >
-          🔧 Manual Redirect
-        </button>
-      )}
-      
+      {/* Banner Section */}
       <div className="hidden lg:block w-1/2 bg-[#ffede1] relative overflow-hidden">
         <Image
           src={banner}
-          alt="Register"
+          alt="Login Banner"
           fill
           style={{ objectFit: "cover", objectPosition: "center" }}
           priority
         />
       </div>
+      
+      {/* Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col p-8 lg:p-16 justify-center">
         <div className="max-w-md w-full mx-auto">
-          <div className="flex justify-center">
-            <Image src={logo} width={200} height={50} alt="Logo" />
+          <div className="flex justify-center mb-8">
+            <Image src={logo} width={200} height={50} alt="Company Logo" priority />
           </div>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
+          
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </Label>
               <Input
                 id="email"
-                name="email"
                 type="email"
-                className="bg-[#ffede1]"
+                className="bg-[#ffede1] focus:ring-2 focus:ring-black transition-colors"
                 autoComplete="email"
                 placeholder="Enter your email"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={handleInputChange('email')}
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <Input
                 id="password"
-                name="password"
                 type="password"
-                className="bg-[#ffede1]"
+                className="bg-[#ffede1] focus:ring-2 focus:ring-black transition-colors"
                 autoComplete="current-password"
                 placeholder="Enter your password"
                 required
                 value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handleInputChange('password')}
                 disabled={isLoading}
               />
             </div>
+            
             <Button
               type="submit"
-              className="w-full bg-black text-white hover:bg-black transition-colors"
+              className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-2.5"
               disabled={isLoading}
             >
               {isLoading ? "LOGGING IN..." : "LOGIN"}
             </Button>
+            
             <p className="text-center text-[#3f3d56] text-sm">
-              New here{" "}
+              New here?{" "}
               <Link
-                href={"/auth/register"}
-                className="text-[#000] hover:underline font-bold"
+                href={ROUTES.REGISTER}
+                className="text-black hover:underline font-semibold transition-colors"
               >
-                Sign up
+                Create an account
               </Link>
             </p>
           </form>
