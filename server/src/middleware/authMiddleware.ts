@@ -12,10 +12,12 @@ export const authenticateJwt = async (
     const accessToken = req.cookies?.accessToken || 
                        req.headers.authorization?.replace('Bearer ', '');
 
+    console.log("ACCESS_TOKEN checking.....", accessToken)
     if (!accessToken) {
       res.status(401).json({ success: false, error: "Access token is not present" });
       return;
     }
+    console.log("ACCESS_TOKEN is presnet ")
 
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
     const { payload } = await jwtVerify(accessToken, secret);

@@ -86,7 +86,7 @@ const login = async (req: Request, res: Response): Promise<void> => {
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
-
+console.log("Extracted User", extractCurrentUser)
     if (
       !extractCurrentUser ||
       !(await bcrypt.compare(password, extractCurrentUser.password))
@@ -94,12 +94,14 @@ const login = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
     }
+console.log("ACCESS_TOKEN generating...")
 
     const accessToken = signAccessToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
+    console.log("ACCESS_TOKEN generated", accessToken)
 
     const refreshToken = uuidv4();
     const hashed = hashToken(refreshToken);

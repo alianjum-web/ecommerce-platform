@@ -150,7 +150,7 @@ const createProduct = asyncHandler(
 // TODO:- Add pagination
 const fetchAllProductsForAdmin = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user || req.user.role !== "admin") {
+    if (!req.user || req.user.role !== "SUPER_ADMIN") {
       throw new UnauthorizedError("Admin privileges required");
     }
 
