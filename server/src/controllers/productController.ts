@@ -179,6 +179,7 @@ const fetchAllProductsForAdmin = asyncHandler(
             id: true,
             name: true,
             price: true,
+            images: true,
             stock: true,
             category: true,
             createdAt: true,
