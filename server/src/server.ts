@@ -19,10 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const corsOptions: cors.CorsOptions = {
-  origin: function (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // Allow requests with no origin (mobile apps, Postman, server-to-server)
     if (!origin) {
       console.log("🌐 CORS: Allowing request with no origin");
@@ -33,21 +30,32 @@ const corsOptions: cors.CorsOptions = {
       process.env.FRONTEND_URL,
       "http://localhost:3000",
       "http://localhost:3012",
+      "https://www.postman.com", // Add Postman for testing
+      "https://postman.com"
     ];
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.some(allowed => origin.includes(allowed.replace(/https?:\/\//, '')))) {
       console.log("✅ CORS: Allowed origin:", origin);
       callback(null, true);
     } else {
       console.log("🚫 CORS Blocked origin:", origin);
       console.log("📋 Allowed origins:", allowedOrigins);
-      return callback(null, false);
+      callback(new Error("CORS policy violation"), false);
     }
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "Cookie",
+    "X-Requested-With",
+    "Accept",
+    "Origin"
+  ],
+  exposedHeaders: ["Set-Cookie", "Date", "ETag"],
   optionsSuccessStatus: 200,
+  maxAge: 86400, // 24 hours
 };
 
 app.use(cors(corsOptions));
