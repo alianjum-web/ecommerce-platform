@@ -24,37 +24,35 @@ async function setTokens(
 ) {
   const isProd = process.env.NODE_ENV === "production";
   
-  // Fix: Use actual domain in production, not undefined
-  const domain = isProd ? new URL(process.env.FRONTEND_URL!).hostname : undefined;
+  // For cross-domain setup, don't set domain or set to backend domain
+  const domain = isProd ? ".ecommerce-platform-841i.onrender.com" : undefined;
 
   console.log("Cookie Configuration:", {
     environment: isProd ? "production" : "development",
-    domain: domain,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    domain: domain || "Not set (cross-domain)",
   });
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
+    path: "/",
+    domain: domain, // This should match your backend domain
+  } as const;
 
   // Access Token Cookie
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    ...cookieOptions,
     maxAge: 60 * 60 * 1000, // 1 hour
-    path: "/",
-    domain: domain,
   });
 
   // Refresh Token Cookie
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/",
-    domain: domain,
   });
 
-  console.log("Cookies set successfully");
+  console.log("✅ Cookies set for domain:", domain || "current domain");
 }
 
 const register = async (req: Request, res: Response): Promise<void> => {
@@ -128,10 +126,11 @@ const login = async (req: Request, res: Response): Promise<void> => {
     );
 
     await setTokens(res, accessToken, refreshToken);
-    console.log(
-      "After setting cookies - Headers:",
-      res.getHeaders()["set-cookie"]
-    );
+
+    // DEBUG: Check what cookies are actually being set
+    console.log("Login Response - Cookies being set:");
+    const setCookieHeaders = res.getHeaders()["set-cookie"];
+    console.log("Set-Cookie headers:", setCookieHeaders);
 
     res.status(200).json({
       success: true,
@@ -141,6 +140,12 @@ const login = async (req: Request, res: Response): Promise<void> => {
         name: extractCurrentUser.name,
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
+      },
+      // Add debug info to response
+      debug: {
+        accessTokenSet: !!accessToken,
+        refreshTokenSet: !!refreshToken,
+        cookiesInResponse: setCookieHeaders,
       },
     });
   } catch (error) {
