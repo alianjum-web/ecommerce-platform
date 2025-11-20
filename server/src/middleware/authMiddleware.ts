@@ -9,15 +9,30 @@ export const authenticateJwt = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    console.log("🔍 Auth Middleware - Headers:", req.headers);
+    console.log("🔍 Auth Middleware - Cookies:", req.cookies);
+    
     const accessToken = req.cookies?.accessToken || 
-                       req.headers.authorization?.replace('Bearer ', '');
+                       req.headers.authorization?.replace('Bearer ', '') ||
+                       req.headers.cookie?.split(';')
+                         .find(c => c.trim().startsWith('accessToken='))
+                         ?.split('=')[1];
 
-    console.log("ACCESS_TOKEN checking.....", accessToken)
+    console.log("ACCESS_TOKEN extracted:", accessToken ? "Present" : "Missing");
+
     if (!accessToken) {
-      res.status(401).json({ success: false, error: "Access token is not present" });
+      console.log("❌ No access token found in request");
+      res.status(401).json({ 
+        success: false, 
+        error: "Access token is not present",
+        debug: {
+          cookies: Object.keys(req.cookies || {}),
+          authHeader: req.headers.authorization ? "Present" : "Missing",
+          allCookies: req.headers.cookie || "No cookies"
+        }
+      });
       return;
     }
-    console.log("ACCESS_TOKEN is presnet ")
 
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
     const { payload } = await jwtVerify(accessToken, secret);
@@ -28,10 +43,15 @@ export const authenticateJwt = async (
       role: payload.role as string || "user",
     };
     
+    console.log("✅ JWT Verified - User:", req.user.email);
     next();
   } catch (error) {
-    console.error("JWT verification error:", error);
-    res.status(401).json({ success: false, error: "Invalid or expired token" });
+    console.error("❌ JWT verification error:", error);
+    res.status(401).json({ 
+      success: false, 
+      error: "Invalid or expired token",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 };
 
