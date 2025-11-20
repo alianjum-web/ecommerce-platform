@@ -54,8 +54,17 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       console.log("Admin products fetched successfully:", response.data);
 
+      // ✅ FIX: Properly extract products from response
+      const productsData =
+        response.data.data?.items ||
+        response.data.items ||
+        response.data.data ||
+        [];
+
+      console.log("Extracted products:", productsData);
+
       set({
-        products: response.data,
+        products: productsData,
         isLoading: false,
       });
     } catch (error: any) {
@@ -63,6 +72,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       set({
         error: error.response?.data?.message || "Failed to fetch products",
         isLoading: false,
+        products: [], // ✅ Reset products on error
       });
     }
   },
@@ -158,54 +168,54 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   fetchProductsForClient: async (params) => {
-  set({ isLoading: true, error: null });
-  try {
-    const queryParams = {
-      ...params,
-      categories: params.categories?.join(","),
-      sizes: params.sizes?.join(","),
-      colors: params.colors?.join(","),
-      brands: params.brands?.join(","),
-    };
+    set({ isLoading: true, error: null });
+    try {
+      const queryParams = {
+        ...params,
+        categories: params.categories?.join(","),
+        sizes: params.sizes?.join(","),
+        colors: params.colors?.join(","),
+        brands: params.brands?.join(","),
+      };
 
-    console.log("Fetching client products with params:", queryParams);
+      console.log("Fetching client products with params:", queryParams);
 
-    const response = await axios.get(
-      `${API_ROUTES.PRODUCTS}/fetch-client-products`,
-      {
-        params: queryParams,
-        withCredentials: true,
-      }
-    );
+      const response = await axios.get(
+        `${API_ROUTES.PRODUCTS}/fetch-client-products`,
+        {
+          params: queryParams,
+          withCredentials: true,
+        }
+      );
 
-    console.log("RESPONSE_OBJECT", response);
-    
-    // ✅ FIX: Access the nested data structure correctly
-    const responseData = response.data.data || response.data;
-    
-    console.log("Client products fetched successfully:", {
-      productsCount: responseData.products?.length,
-      currentPage: responseData.currentPage,
-      totalPages: responseData.totalPages,
-      totalProducts: responseData.totalProducts
-    });
+      console.log("RESPONSE_OBJECT", response);
 
-    set({
-      products: responseData.products || [],
-      currentPage: responseData.currentPage || 1,
-      totalPages: responseData.totalPages || 1,
-      totalProducts: responseData.totalProducts || 0,
-      isLoading: false,
-    });
-  } catch (error: any) {
-    console.error("Failed to fetch client products:", error);
-    set({ 
-      error: error.response?.data?.message || "Failed to fetch products", 
-      isLoading: false,
-      products: [],
-    });
-  }
-},
+      // ✅ FIX: Access the nested data structure correctly
+      const responseData = response.data.data || response.data;
+
+      console.log("Client products fetched successfully:", {
+        productsCount: responseData.products?.length,
+        currentPage: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        totalProducts: responseData.totalProducts,
+      });
+
+      set({
+        products: responseData.products || [],
+        currentPage: responseData.currentPage || 1,
+        totalPages: responseData.totalPages || 1,
+        totalProducts: responseData.totalProducts || 0,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch client products:", error);
+      set({
+        error: error.response?.data?.message || "Failed to fetch products",
+        isLoading: false,
+        products: [],
+      });
+    }
+  },
 
   setCurrentPage: (page: number) => set({ currentPage: page }),
 }));
