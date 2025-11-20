@@ -9,26 +9,35 @@ export const authenticateJwt = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    console.log("🔍 Auth Middleware - Headers:", req.headers);
-    console.log("🔍 Auth Middleware - Cookies:", req.cookies);
-    
-    const accessToken = req.cookies?.accessToken || 
-                       req.headers.authorization?.replace('Bearer ', '') ||
-                       req.headers.cookie?.split(';')
-                         .find(c => c.trim().startsWith('accessToken='))
-                         ?.split('=')[1];
+    console.log("🔍 Auth Debug - All cookies:", Object.keys(req.cookies || {}));
+    console.log("🔍 Auth Debug - Authorization header:", req.headers.authorization ? "Present" : "Missing");
 
-    console.log("ACCESS_TOKEN extracted:", accessToken ? "Present" : "Missing");
+    // Method 1: Check cookies first
+    let accessToken = req.cookies?.accessToken;
+    
+    // Method 2: Check Authorization header
+    if (!accessToken && req.headers.authorization) {
+      accessToken = req.headers.authorization.replace('Bearer ', '');
+    }
+    
+    // Method 3: Check query parameter (for specific cases)
+    if (!accessToken && req.query.accessToken) {
+      accessToken = req.query.accessToken as string;
+    }
+
+    console.log("ACCESS_TOKEN found via:", 
+      req.cookies?.accessToken ? "Cookie" : 
+      req.headers.authorization ? "Header" : 
+      "Not found");
 
     if (!accessToken) {
-      console.log("❌ No access token found in request");
       res.status(401).json({ 
         success: false, 
         error: "Access token is not present",
+        suggestion: "Include token in Authorization header as 'Bearer <token>'",
         debug: {
-          cookies: Object.keys(req.cookies || {}),
-          authHeader: req.headers.authorization ? "Present" : "Missing",
-          allCookies: req.headers.cookie || "No cookies"
+          availableCookies: Object.keys(req.cookies || {}),
+          hasAuthHeader: !!req.headers.authorization
         }
       });
       return;
@@ -50,7 +59,7 @@ export const authenticateJwt = async (
     res.status(401).json({ 
       success: false, 
       error: "Invalid or expired token",
-      details: error instanceof Error ? error.message : "Unknown error"
+      solution: "Please login again to get a new token"
     });
   }
 };

@@ -94,44 +94,30 @@ const login = async (req: Request, res: Response): Promise<void> => {
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
-    console.log("Extracted User", extractCurrentUser);
-    if (
-      !extractCurrentUser ||
-      !(await bcrypt.compare(password, extractCurrentUser.password))
-    ) {
+    
+    if (!extractCurrentUser || !(await bcrypt.compare(password, extractCurrentUser.password))) {
       res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
     }
-    console.log("ACCESS_TOKEN generating...");
 
     const accessToken = signAccessToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
-    console.log("ACCESS_TOKEN generated", accessToken);
 
     const refreshToken = uuidv4();
     const hashed = hashToken(refreshToken);
 
-    // store hashed refresh token in DB (replace previous token)
     await prisma.user.update({
       where: { id: extractCurrentUser.id },
-      data: { refreshToken: hashed }, // ensure your prisma schema has refreshToken?: string | null
+      data: { refreshToken: hashed },
     });
-    console.log("Token is setting ....");
-    console.log(
-      "Before setting cookies - Headers:",
-      Object.keys(res.getHeaders())
-    );
 
+    // Try to set cookies (for same-domain or compatible scenarios)
     await setTokens(res, accessToken, refreshToken);
 
-    // DEBUG: Check what cookies are actually being set
-    console.log("Login Response - Cookies being set:");
-    const setCookieHeaders = res.getHeaders()["set-cookie"];
-    console.log("Set-Cookie headers:", setCookieHeaders);
-
+    // ALSO return tokens in response body for cross-domain scenarios
     res.status(200).json({
       success: true,
       message: "Login successfully",
@@ -141,12 +127,11 @@ const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
-      // Add debug info to response
-      debug: {
-        accessTokenSet: !!accessToken,
-        refreshTokenSet: !!refreshToken,
-        cookiesInResponse: setCookieHeaders,
-      },
+      // Include tokens in response for cross-domain usage
+      tokens: {
+        accessToken,
+        refreshToken
+      }
     });
   } catch (error) {
     console.error(error);
