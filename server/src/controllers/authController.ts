@@ -23,19 +23,17 @@ async function setTokens(
   refreshToken: string
 ) {
   const isProd = process.env.NODE_ENV === "production";
-  const domain = isProd ? process.env.COOKIE_DOMAIN : undefined;
   
+  // Fix: Use actual domain in production, not undefined
+  const domain = isProd ? new URL(process.env.FRONTEND_URL!).hostname : undefined;
+
   console.log("Cookie Configuration:", {
-    environment: isProd ? 'production' : 'development',
+    environment: isProd ? "production" : "development",
     domain: domain,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax"
+    sameSite: isProd ? "none" : "lax",
   });
-  // Debug your environment
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("COOKIE_DOMAIN:", process.env.COOKIE_DOMAIN);
-console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
-console.log("Sending the tokens")
+
   // Access Token Cookie
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -124,10 +122,16 @@ const login = async (req: Request, res: Response): Promise<void> => {
       data: { refreshToken: hashed }, // ensure your prisma schema has refreshToken?: string | null
     });
     console.log("Token is setting ....");
-        console.log("Before setting cookies - Headers:", Object.keys(res.getHeaders()));
+    console.log(
+      "Before setting cookies - Headers:",
+      Object.keys(res.getHeaders())
+    );
 
     await setTokens(res, accessToken, refreshToken);
-    console.log("After setting cookies - Headers:", res.getHeaders()['set-cookie']);
+    console.log(
+      "After setting cookies - Headers:",
+      res.getHeaders()["set-cookie"]
+    );
 
     res.status(200).json({
       success: true,
