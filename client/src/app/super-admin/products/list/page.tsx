@@ -1,5 +1,6 @@
 "use client";
 
+import { ProductTableSkeleton } from "@/components/products/ProductTableSkeleton";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,7 +15,7 @@ import { useProductStore } from "@/store/useProductStore";
 import { Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function SuperAdminProductListingPage() {
   const { products, isLoading, fetchAllProductsForAdmin, deleteProduct } =
@@ -22,13 +23,19 @@ function SuperAdminProductListingPage() {
   const { toast } = useToast();
   const router = useRouter();
   const productFetchRef = useRef(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // ✅ Fix hydration issue
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
-    if (!productFetchRef.current) {
+    if (!productFetchRef.current && isClient) {
       fetchAllProductsForAdmin();
       productFetchRef.current = true;
     }
-  }, [fetchAllProductsForAdmin]);
+  }, [fetchAllProductsForAdmin, isClient]);
 
   async function handleDeleteProduct(getId: string) {
     if (window.confirm("Are you sure you want to delete this product?")) {
@@ -42,17 +49,23 @@ function SuperAdminProductListingPage() {
     }
   }
 
-  if (isLoading) return null;
+ // In your main component, replace the loading state
+if (!isClient || isLoading) {
+  return <ProductTableSkeleton />;
+}
+  // ✅ Safe check for products
+  const safeProducts = products || [];
 
   return (
     <div className="p-6">
       <div className="flex flex-col gap-6">
         <header className="flex items-center justify-between">
-          <h1>All Products</h1>
+          <h1 className="text-2xl font-bold">All Products</h1>
           <Button onClick={() => router.push("/super-admin/products/add")}>
             Add New Product
           </Button>
         </header>
+        
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
             <Table>
@@ -61,67 +74,82 @@ function SuperAdminProductListingPage() {
                   <TableHead>Product Name</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>category</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className=" rounded-l bg-gray-100 overflow-hidden">
-                          {product.images[0] && (
-                            <Image
-                              src={product.images[0]}
-                              alt="product image"
-                              width={60}
-                              height={60}
-                              className="object-cover w-full h=full"
-                            />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Size: {product.sizes.join(",")}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <p>{product.stock} Item left</p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="font-medium">
-                        {product.category.toLocaleUpperCase()}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          onClick={() =>
-                            router.push(
-                              `/super-admin/products/add?id=${product.id}`
-                            )
-                          }
-                          variant={"ghost"}
-                          size={"icon"}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          variant={"ghost"}
-                          size={"icon"}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                {safeProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="text-muted-foreground">
+                        {isLoading ? "Loading products..." : "No products found"}
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  safeProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-lg bg-gray-100 overflow-hidden w-15 h-15">
+                            {product.images && product.images[0] ? (
+                              <Image
+                                src={product.images[0]}
+                                alt={product.name || "Product image"}
+                                width={60}
+                                height={60}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <div className="w-15 h-15 flex items-center justify-center bg-gray-200">
+                                <span className="text-xs text-gray-500">No Image</span>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {/* ✅ Safe check for sizes */}
+                              Size: {product.sizes ? product.sizes.join(", ") : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>${product.price?.toFixed(2) || "0.00"}</TableCell>
+                      <TableCell>
+                        <p>{product.stock || 0} Item left</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium">
+                          {product.category ? product.category.toUpperCase() : "UNCATEGORIZED"}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            onClick={() =>
+                              router.push(
+                                `/super-admin/products/add?id=${product.id}`
+                              )
+                            }
+                            variant={"ghost"}
+                            size={"icon"}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            variant={"ghost"}
+                            size={"icon"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
