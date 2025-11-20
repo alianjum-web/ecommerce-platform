@@ -9,36 +9,18 @@ export const authenticateJwt = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    console.log("🔍 Auth Debug - All cookies:", Object.keys(req.cookies || {}));
-    console.log("🔍 Auth Debug - Authorization header:", req.headers.authorization ? "Present" : "Missing");
-
-    // Method 1: Check cookies first
+    // ✅ Check cookie first (primary method for browsers)
     let accessToken = req.cookies?.accessToken;
     
-    // Method 2: Check Authorization header
+    // ✅ Fallback: Authorization header (for mobile apps, Postman)
     if (!accessToken && req.headers.authorization) {
       accessToken = req.headers.authorization.replace('Bearer ', '');
     }
-    
-    // Method 3: Check query parameter (for specific cases)
-    if (!accessToken && req.query.accessToken) {
-      accessToken = req.query.accessToken as string;
-    }
-
-    console.log("ACCESS_TOKEN found via:", 
-      req.cookies?.accessToken ? "Cookie" : 
-      req.headers.authorization ? "Header" : 
-      "Not found");
 
     if (!accessToken) {
       res.status(401).json({ 
         success: false, 
-        error: "Access token is not present",
-        suggestion: "Include token in Authorization header as 'Bearer <token>'",
-        debug: {
-          availableCookies: Object.keys(req.cookies || {}),
-          hasAuthHeader: !!req.headers.authorization
-        }
+        error: "Authentication required" 
       });
       return;
     }
@@ -49,17 +31,15 @@ export const authenticateJwt = async (
     req.user = {
       userId: payload.userId as number,
       email: payload.email as string,
-      role: payload.role as string || "user",
+      role: payload.role as string,
     };
     
-    console.log("✅ JWT Verified - User:", req.user.email);
     next();
   } catch (error) {
-    console.error("❌ JWT verification error:", error);
+    console.error("JWT verification failed:", error);
     res.status(401).json({ 
       success: false, 
-      error: "Invalid or expired token",
-      solution: "Please login again to get a new token"
+      error: "Invalid or expired token" 
     });
   }
 };

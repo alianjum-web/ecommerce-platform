@@ -23,36 +23,34 @@ async function setTokens(
   refreshToken: string
 ) {
   const isProd = process.env.NODE_ENV === "production";
-  
-  // For cross-domain setup, don't set domain or set to backend domain
-  const domain = isProd ? ".ecommerce-platform-841i.onrender.com" : undefined;
 
-  console.log("Cookie Configuration:", {
-    environment: isProd ? "production" : "development",
-    domain: domain || "Not set (cross-domain)",
-  });
-
+  // ✅ Industry Standard: No domain for cross-origin, let browser handle it
   const cookieOptions = {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? ("none" as const) : ("lax" as const),
+    httpOnly: true, // ✅ Prevent XSS
+    secure: isProd, // ✅ HTTPS only in production
+    sameSite: isProd ? "none" : "lax", // ✅ "none" for cross-site + secure
     path: "/",
-    domain: domain, // This should match your backend domain
+    maxAge: 60 * 60 * 1000, // 1 hour for access token
   } as const;
 
   // Access Token Cookie
-  res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
-    maxAge: 60 * 60 * 1000, // 1 hour
-  });
+  res.cookie("accessToken", accessToken, cookieOptions);
 
-  // Refresh Token Cookie
+  // Refresh Token Cookie (longer expiry)
   res.cookie("refreshToken", refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
-  console.log("✅ Cookies set for domain:", domain || "current domain");
+  // ✅ Logging for development only
+  if (!isProd) {
+    console.log("🍪 Cookies set with options:", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      domain: "Not set (auto)",
+    });
+  }
 }
 
 const register = async (req: Request, res: Response): Promise<void> => {
@@ -127,11 +125,8 @@ const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
-      // Include tokens in response for cross-domain usage
-      tokens: {
-        accessToken,
-        refreshToken
-      }
+      // ❌ DON'T include tokens in response body for production
+      // tokens are now HTTP-only cookies (more secure
     });
   } catch (error) {
     console.error(error);
@@ -179,42 +174,56 @@ const getCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
-// POST /refresh-token
-const refreshTokenController = async (req: Request, res: Response) => {
+const refreshAccessToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const token = req.cookies?.refreshToken;
-    if (!token) return res.status(401).json({ success: false });
+    const refreshToken = req.cookies?.refreshToken;
+    
+    if (!refreshToken) {
+      res.status(401).json({ success: false, error: "Refresh token required" });
+      return;
+    }
 
-    const hashed = hashToken(token);
+    // Verify refresh token
+    const hashedToken = hashToken(refreshToken);
     const user = await prisma.user.findFirst({
-      where: { refreshToken: hashed },
-    });
-    if (!user) return res.status(401).json({ success: false });
-
-    // rotate tokens: new access token, optionally new refresh token
-    const accessToken = signAccessToken(user.id, user.email, user.role);
-    const newRefreshToken = uuidv4();
-    const newHashed = hashToken(newRefreshToken);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: newHashed },
+      where: { refreshToken: hashedToken }
     });
 
-    await setTokens(res, accessToken, newRefreshToken);
+    if (!user) {
+      // Clear invalid cookies
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken');
+      res.status(401).json({ success: false, error: "Invalid refresh token" });
+      return;
+    }
 
-    return res.json({
+    // Issue new access token
+    const newAccessToken = signAccessToken(user.id, user.email, user.role);
+    
+    // Set new access token cookie
+    const isProd = process.env.NODE_ENV === "production";
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/",
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
+    res.json({
       success: true,
+      message: "Token refreshed",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-      },
+      }
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    res.status(500).json({ success: false, error: "Token refresh failed" });
   }
 };
 
@@ -237,4 +246,4 @@ const logout = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
-export { register, login, getCurrentUser, refreshTokenController, logout };
+export { register, login, getCurrentUser, refreshAccessToken, logout };
