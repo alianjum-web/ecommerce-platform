@@ -36,31 +36,105 @@ export const useCartStore = create<CartStore>((set, get) => {
             withCredentials: true,
           }
         );
-      } catch (e) {
+      } catch (e: any) {
+        console.error("❌ Failed to update cart quantity:", e);
         set({ error: "Failed to update cart quantity" });
       }
-    }
+    },
+    500 // 500ms debounce
   );
 
   return {
     items: [],
     isLoading: false,
     error: null,
+
     fetchCart: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await axios.get(`${API_ROUTES.CART}/fetch-cart`, {
-          withCredentials: true,
+        console.log("🛒 [DEBUG] Starting fetchCart...");
+
+        // ✅ Log the exact URL construction
+        const baseUrl = API_ROUTES.CART;
+        const fullUrl = `${baseUrl}/fetch-cart`;
+
+        console.log("🔗 [DEBUG] URL Breakdown:", {
+          baseUrl,
+          fullUrl,
+          NODE_ENV: process.env.NODE_ENV,
+          API_BASE_URL: process.env.NEXT_PUBLIC_API_URL,
         });
 
-        set({ items: response.data.data, isLoading: false });
-      } catch (e) {
-        set({ error: "Failed to fetch cart", isLoading: false });
+        // ✅ Test if the route exists with a simple fetch first
+        console.log("🧪 [DEBUG] Testing route existence...");
+        try {
+          const testResponse = await fetch(fullUrl, {
+            method: "GET",
+            credentials: "include",
+          });
+          console.log("🧪 [DEBUG] Route test result:", {
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            ok: testResponse.ok,
+          });
+        } catch (testError) {
+          console.log("🧪 [DEBUG] Route test failed:", testError);
+        }
+
+        // ✅ Now try the actual axios call
+        console.log("🔄 [DEBUG] Making axios request to:", fullUrl);
+
+        const response = await axios.get(fullUrl, {
+          withCredentials: true,
+          timeout: 10000,
+          // ✅ Add headers for better debugging
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug": "true",
+          },
+        });
+
+        console.log("✅ [DEBUG] Axios response received:", {
+          status: response.status,
+          statusText: response.status,
+          data: response.data,
+        });
+
+        const cartItems = response.data.data || response.data.items || [];
+        console.log("📦 [DEBUG] Cart items extracted:", cartItems);
+
+        set({
+          items: cartItems,
+          isLoading: false,
+        });
+      } catch (error: any) {
+        console.error("❌ [DEBUG] fetchCart failed completely:", error);
+
+        const errorDetails = {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          data: error.response?.data,
+        };
+
+        console.log("🔍 [DEBUG] Complete error details:", errorDetails);
+
+        set({
+          error: `Cart fetch failed: ${error.response?.status} ${error.response?.statusText}`,
+          isLoading: false,
+        });
       }
     },
+
     addToCart: async (item) => {
       set({ isLoading: true, error: null });
       try {
+        console.log("➕ Adding to cart:", item);
+
         const response = await axios.post(
           `${API_ROUTES.CART}/add-to-cart`,
           item,
@@ -69,17 +143,26 @@ export const useCartStore = create<CartStore>((set, get) => {
           }
         );
 
+        console.log("✅ Add to cart response:", response.data);
+
         set((state) => ({
           items: [...state.items, response.data.data],
           isLoading: false,
         }));
-      } catch (e) {
-        set({ error: "Failed to add to cart", isLoading: false });
+      } catch (error: any) {
+        console.error("❌ Add to cart failed:", error);
+        set({
+          error: error.response?.data?.message || "Failed to add to cart",
+          isLoading: false,
+        });
       }
     },
+
     removeFromCart: async (id) => {
       set({ isLoading: true, error: null });
       try {
+        console.log("🗑️ Removing from cart:", id);
+
         await axios.delete(`${API_ROUTES.CART}/remove/${id}`, {
           withCredentials: true,
         });
@@ -88,11 +171,18 @@ export const useCartStore = create<CartStore>((set, get) => {
           items: state.items.filter((item) => item.id !== id),
           isLoading: false,
         }));
-      } catch (e) {
-        set({ error: "Failed to delete from cart", isLoading: false });
+      } catch (error: any) {
+        console.error("❌ Remove from cart failed:", error);
+        set({
+          error: error.response?.data?.message || "Failed to delete from cart",
+          isLoading: false,
+        });
       }
     },
+
     updateCartItemQuantity: async (id, quantity) => {
+      if (quantity < 1) return; // Prevent negative quantities
+
       set((state) => ({
         items: state.items.map((cartItem) =>
           cartItem.id === id ? { ...cartItem, quantity } : cartItem
@@ -101,9 +191,12 @@ export const useCartStore = create<CartStore>((set, get) => {
 
       debounceUpdateCartItemQuantity(id, quantity);
     },
+
     clearCart: async () => {
       set({ isLoading: true, error: null });
       try {
+        console.log("🧹 Clearing cart...");
+
         await axios.post(
           `${API_ROUTES.CART}/clear-cart`,
           {},
@@ -113,8 +206,12 @@ export const useCartStore = create<CartStore>((set, get) => {
         );
 
         set({ items: [], isLoading: false });
-      } catch (e) {
-        set({ error: "Failed to cart clear ", isLoading: false });
+      } catch (error: any) {
+        console.error("❌ Clear cart failed:", error);
+        set({
+          error: error.response?.data?.message || "Failed to clear cart",
+          isLoading: false,
+        });
       }
     },
   };
