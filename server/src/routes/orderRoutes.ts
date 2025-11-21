@@ -1,22 +1,30 @@
 import express from "express";
 import { authenticateJwt, isSuperAdmin } from "../middleware/authMiddleware";
 import {
-  capturePaypalOrder,
-  createFinalOrder,
-  createPaypalOrder,
+  createPaymentOrder,
+  capturePayment,
+  createFinalOrderInDB,
   getAllOrdersForAdmin,
   getOrder,
   getOrdersByUserId,
   updateOrderStatus,
 } from "../controllers/orderController";
+import { ApiResponse } from "../utils/ApiResponse";
+import { PaymentFactory } from "../services/payment/paypal.factory";
 
 const router = express.Router();
 
 router.use(authenticateJwt);
 
-router.post("/create-paypal-order", createPaypalOrder);
-router.post("/capture-paypal-order", capturePaypalOrder);
-router.post("/create-final-order", createFinalOrder);
+router.post("/create-order", createPaymentOrder);
+router.post("/capture-order", capturePayment);
+
+router.get('/methods', (req, res) => {
+  const methods = PaymentFactory.getAvailableMethods();
+  res.json(new ApiResponse(200, methods, "Available payment methods"));
+});
+
+router.post("/create-final-order", createFinalOrderInDB);
 router.get("/get-single-order/:orderId", getOrder);
 router.get("/get-order-by-user-id", getOrdersByUserId);
 router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersForAdmin);
