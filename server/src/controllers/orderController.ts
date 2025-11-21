@@ -7,7 +7,8 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { getErrorMessage } from "../utils/catchError";
-import { PrismaClient } from "@prisma/client";
+import { PaymentFactory } from "../services/payment/paypal.factory";
+import { PaymentOrderData } from "../interfaces/payment.interface";
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
@@ -35,190 +36,178 @@ async function getPaypalAccessToken() {
   return response.data.access_token;
 }
 
-const createPaypalOrder = asyncHandler(
+const createPaymentOrder = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const { items, total } = req.body;
+    const { items, total, paymentMethod } = req.body;
+    const userId = req.user?.userId;
 
-    if (!items && !total) {
-      return res
-        .status(404)
-        .json(new ApiError(404, "Invalid data to process the order."));
+    if (!userId) {
+      return res.status(401).json(new ApiError(401, "Unauthorized user"));
     }
 
-    const accessToken = await getPaypalAccessToken();
-
-    const paypalItems = items.map((item: any) => ({
-      name: item.name,
-      description: item.description || "",
-      sku: item.id,
-      unit_amount: {
-        currency_code: "USD",
-        value: item.price.toFixed(2),
-      },
-      quantity: item.quantity.toString(),
-      category: "PHYSICAL_GOODS",
-    }));
-
-    const itemTotal = paypalItems.reduce(
-      (sum: any, item: any) =>
-        sum + parseFloat(item.unit_amount.value) * parseInt(item.quantity),
-      0
-    );
-
-    const response = await axios.post(
-      `${PAYPAL_BASE_API}/v2/checkout/orders`,
-      {
-        intent: "CAPTURE",
-        purchase_units: [
-          {
-            amount: {
-              currency_code: "USD",
-              value: total.toFixed(2),
-              breakdown: {
-                item_total: {
-                  currency_code: "USD",
-                  value: itemTotal.toFixed(2),
-                },
-              },
-            },
-            items: paypalItems,
-          },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "PayPal-Request-ID": uuidv4(),
-        },
-      }
-    );
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, response.data, "Paypal order created successfully")
-      );
-  }
-);
-
-const capturePaypalOrder = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const { orderId } = req.body;
-    const accessToken = await getPaypalAccessToken();
-
-    const response = await axios.post(
-      `${PAYPAL_BASE_API}/v2/checkout/orders/${orderId}/capture`,
-      {},
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    res.status(200).json(response.data);
-  }
-);
-// TODO: add different payment mehtod: follow modularity
-const createFinalOrder = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const { items, addressId, couponId, total, paymentId } = req.body;
-      const userId = req.user?.userId;
-      if (!userId) {
-        return res.status(401).json(new ApiError(401, "Unauthorized user"));
-      }
-
-      // Add this VALIDATION before transaction - SUPER IMPORTANT!
-      for (const item of items) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId },
-          select: { stock: true, name: true },
-        });
-
-        if (!product) {
-          throw new ApiError(404, `Product ${item.productId} not found`);
-        }
-
-        if (product.stock < item.quantity) {
-          throw new ApiError(
-            400,
-            `Only ${product.stock} items left for ${product.name}`
-          );
-        }
-      }
-
-      const order = await prisma.$transaction(async (prisma) => {
-        //       //create new order
-        const newOrder = await prisma.order.create({
-          data: {
-            userId,
-            addressId,
-            couponId,
-            total,
-            paymentMethod: "CREDIT_CARD",
-            paymentStatus: "COMPLETED",
-            paymentId,
-            items: {
-              create: items.map((item: any) => ({
-                productId: item.productId,
-                productName: item.productName,
-                productCategory: item.productCategory,
-                quantity: item.quantity,
-                size: item.size,
-                color: item.color,
-                price: item.price,
-              })),
-            },
-          },
-          include: {
-            items: true,
-          },
-        });
-
-        for (const item of items) {
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: {
-              stock: { decrement: item.quantity },
-              soldCount: { increment: item.quantity },
-            },
-          });
-        }
-
-        await prisma.cartItem.deleteMany({ where: { cart: { userId } } });
-        await prisma.cart.delete({ where: { userId } });
-
-        if (couponId) {
-          await prisma.coupon.update({
-            where: { id: couponId },
-            data: {
-              usageCount: { increment: 1 },
-            },
-          });
-        }
-
-        return newOrder;
-      });
-
-      return res
-        .status(201)
-        .json(
-          new ApiResponse(201, order, "Created the final order successfully.")
+      // Validate payment method
+      const availableMethods = PaymentFactory.getAvailableMethods();
+      if (!availableMethods.includes(paymentMethod.toUpperCase())) {
+        return res.status(400).json(
+          new ApiError(400, `Payment method '${paymentMethod}' is not supported`)
         );
-    } catch (error) {
-      console.error("🎯 CREATE_ORDER_DEBUG:", {
-        error: getErrorMessage(error), // ← Use helper
-        userId: req.user?.userId,
-        timestamp: new Date().toISOString(),
-      });
+      }
 
-      // Re-throw for asyncHandler to handle
-      throw error;
+      // Create payment service
+      const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
+      
+      // Validate payment data
+      const orderData: PaymentOrderData = {
+        items,
+        total,
+        userId,
+        currency: "USD"
+      };
+
+      if (!paymentService.validatePayment(orderData)) {
+        return res.status(400).json(
+          new ApiError(400, "Invalid payment data")
+        );
+      }
+
+      // Create payment order
+      const paymentResult = await paymentService.createOrder(orderData);
+
+      if (!paymentResult.success) {
+        return res.status(400).json(
+          new ApiError(400, paymentResult.error || "Payment order creation failed")
+        );
+      }
+
+      return res.status(200).json(
+        new ApiResponse(200, {
+          paymentId: paymentResult.paymentId,
+          orderData: paymentResult.data
+        }, `${paymentMethod} order created successfully`)
+      );
+
+    } catch (error) {
+      next(error);
     }
   }
 );
+
+const capturePayment = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const { paymentId, paymentMethod, orderData } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json(new ApiError(401, "Unauthorized user"));
+    }
+
+    try {
+      const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
+      const captureResult = await paymentService.capturePayment(paymentId);
+
+      if (!captureResult.success) {
+        return res.status(400).json(
+          new ApiError(400, captureResult.error || "Payment capture failed")
+        );
+      }
+
+      // Now create the final order in database
+      const finalOrder = await createFinalOrderInDB({
+        ...orderData,
+        userId,
+        paymentMethod: paymentMethod.toUpperCase(),
+        paymentId: captureResult.paymentId
+      });
+
+      return res.status(200).json(
+        new ApiResponse(200, {
+          order: finalOrder,
+          paymentData: captureResult.data
+        }, "Payment captured and order created successfully")
+      );
+
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Updated final order creation
+const createFinalOrderInDB = async (orderData: any) => {
+  return await prisma.$transaction(async (prisma) => {
+    // Stock validation (your existing code)
+    for (const item of orderData.items) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { stock: true, name: true },
+      });
+
+      if (!product) {
+        throw new ApiError(404, `Product ${item.productId} not found`);
+      }
+
+      if (product.stock < item.quantity) {
+        throw new ApiError(
+          400,
+          `Only ${product.stock} items left for ${product.name}`
+        );
+      }
+    }
+
+    // Create order
+    const newOrder = await prisma.order.create({
+      data: {
+        userId: orderData.userId,
+        addressId: orderData.addressId,
+        couponId: orderData.couponId,
+        total: orderData.total,
+        paymentMethod: orderData.paymentMethod,
+        paymentStatus: "COMPLETED",
+        paymentId: orderData.paymentId,
+        items: {
+          create: orderData.items.map((item: any) => ({
+            productId: item.productId,
+            productName: item.productName,
+            productCategory: item.productCategory,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
+            price: item.price,
+          })),
+        },
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    // Update stock and clear cart (your existing code)
+    for (const item of orderData.items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: { decrement: item.quantity },
+          soldCount: { increment: item.quantity },
+        },
+      });
+    }
+
+    await prisma.cartItem.deleteMany({ where: { cart: { userId: orderData.userId } } });
+    await prisma.cart.delete({ where: { userId: orderData.userId } });
+
+    if (orderData.couponId) {
+      await prisma.coupon.update({
+        where: { id: orderData.couponId },
+        data: {
+          usageCount: { increment: 1 },
+        },
+      });
+    }
+
+    return newOrder;
+  });
+};
 
 const getOrder = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -350,9 +339,9 @@ const getOrdersByUserId = asyncHandler(
 );
 
 export {
-  createPaypalOrder,
-  capturePaypalOrder,
-  createFinalOrder,
+  createPaymentOrder,
+  capturePayment,
+  createFinalOrderInDB,
   getOrder,
   updateOrderStatus,
   getAllOrdersForAdmin,
