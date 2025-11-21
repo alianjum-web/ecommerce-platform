@@ -10,7 +10,7 @@ import {
   updateOrderStatus,
 } from "../controllers/orderController";
 import { ApiResponse } from "../utils/ApiResponse";
-import { PaymentFactory } from "../services/payment/paypal.factory";
+import { PaymentFactory } from "../services/payment/payment.factory";
 
 const router = express.Router();
 

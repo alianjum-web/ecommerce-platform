@@ -7,7 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { getErrorMessage } from "../utils/catchError";
-import { PaymentFactory } from "../services/payment/paypal.factory";
+import { PaymentFactory } from "../services/payment/payment.factory";
 import { PaymentOrderData } from "../interfaces/payment.interface";
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
