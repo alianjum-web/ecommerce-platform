@@ -114,7 +114,7 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentMethod PaymentMethod
   paymentStatus PaymentStatus @default(PENDING)
-  paymentId     String?
+  paymentId     String?       // ✅ ADD THIS LINE - Make it optional
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   address       Address       @relation(fields: [addressId], references: [id])
@@ -125,6 +125,7 @@ model Order {
   @@index([userId])
   @@index([addressId])
   @@index([couponId])
+  @@index([paymentId]) // ✅ Add index for better performance
 }
 
 model OrderItem {
@@ -153,6 +154,7 @@ enum Role {
 enum OrderStatus {
   PENDING
   PROCESSING
+  CANCELLED
   SHIPPED
   DELIVERED
 }
@@ -166,4 +168,5 @@ enum PaymentMethod {
 enum PaymentStatus {
   PENDING
   COMPLETED
+  FAILED
 }
