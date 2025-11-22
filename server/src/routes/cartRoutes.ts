@@ -13,7 +13,7 @@ import { addToCartSchema } from "../validations/cartSchema";
 const router = express.Router();
 
 router.get("/fetch-cart",
-  // authenticateJwt,
+  authenticateJwt,
   getCart);
 router.post(
   "/add-to-cart",

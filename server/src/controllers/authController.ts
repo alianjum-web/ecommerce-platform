@@ -125,8 +125,6 @@ const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
-      // ❌ DON'T include tokens in response body for production
-      // tokens are now HTTP-only cookies (more secure
     });
   } catch (error) {
     console.error(error);

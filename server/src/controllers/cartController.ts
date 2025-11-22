@@ -106,17 +106,44 @@ const getCart = asyncHandler(
           .json(new ValidationError("Unauthorized user. Invalid userId."));
       }
 
-      const cart = await prisma.cart.findUnique({
+      // ✅ First, find or create the cart for the user
+      let cart = await prisma.cart.findUnique({
         where: { userId },
         include: {
           items: true,
         },
       });
 
+      // ✅ If cart doesn't exist, create an empty one
       if (!cart) {
-        return res.status(404).json(new ApiError(404, "Cart not found"));
+        console.log(`🛒 Creating new cart for user ${userId}`);
+        cart = await prisma.cart.create({
+          data: {
+            userId: userId,
+            items: {
+              create: [] // Empty cart
+            }
+          },
+          include: {
+            items: true,
+          },
+        });
       }
 
+      // ✅ If cart exists but has no items, return empty array
+      if (cart.items.length === 0) {
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(
+              200,
+              [],
+              "Cart is empty"
+            )
+          );
+      }
+
+      // ✅ Get product details for cart items
       const cartItemsWithProducts = await Promise.all(
         cart.items.map(async (item) => {
           const product = await prisma.product.findUnique({
@@ -128,12 +155,22 @@ const getCart = asyncHandler(
             },
           });
 
+          // ✅ Handle case where product might be deleted
+          if (!product) {
+            console.warn(`⚠️ Product ${item.productId} not found, removing from cart`);
+            // Optional: Remove deleted product from cart
+            await prisma.cartItem.delete({
+              where: { id: item.id }
+            });
+            return null;
+          }
+
           return {
             id: item.id,
             productId: item.productId,
-            name: product?.name,
-            price: product?.price,
-            image: product?.images[0],
+            name: product.name,
+            price: product.price,
+            image: product.images[0],
             color: item.color,
             size: item.size,
             quantity: item.quantity,
@@ -141,16 +178,20 @@ const getCart = asyncHandler(
         })
       );
 
+      // ✅ Filter out null items (deleted products)
+      const validCartItems = cartItemsWithProducts.filter(item => item !== null);
+
       res
         .status(200)
         .json(
           new ApiResponse(
             200,
-            cartItemsWithProducts,
+            validCartItems,
             "Cart fetched successfully"
           )
         );
     } catch (e) {
+      console.error("❌ getCart error:", e);
       res.status(500).json(new ApiError(500, "Failed to fetch cart!"));
     }
   }
