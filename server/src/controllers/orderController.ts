@@ -49,44 +49,55 @@ const createPaymentOrder = asyncHandler(
       // Validate payment method
       const availableMethods = PaymentFactory.getAvailableMethods();
       if (!availableMethods.includes(paymentMethod.toUpperCase())) {
-        return res.status(400).json(
-          new ApiError(400, `Payment method '${paymentMethod}' is not supported`)
-        );
+        return res
+          .status(400)
+          .json(
+            new ApiError(
+              400,
+              `Payment method '${paymentMethod}' is not supported`
+            )
+          );
       }
 
       // Create payment service
       const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
-      
+
       // Validate payment data
       const orderData: PaymentOrderData = {
         items,
         total,
         userId,
-        currency: "USD"
+        currency: "USD",
       };
 
       if (!paymentService.validatePayment(orderData)) {
-        return res.status(400).json(
-          new ApiError(400, "Invalid payment data")
-        );
+        return res.status(400).json(new ApiError(400, "Invalid payment data"));
       }
 
       // Create payment order
       const paymentResult = await paymentService.createOrder(orderData);
 
       if (!paymentResult.success) {
-        return res.status(400).json(
-          new ApiError(400, paymentResult.error || "Payment order creation failed")
-        );
+        return res
+          .status(400)
+          .json(
+            new ApiError(
+              400,
+              paymentResult.error || "Payment order creation failed"
+            )
+          );
       }
 
       return res.status(200).json(
-        new ApiResponse(200, {
-          paymentId: paymentResult.paymentId,
-          orderData: paymentResult.data
-        }, `${paymentMethod} order created successfully`)
+        new ApiResponse(
+          200,
+          {
+            paymentId: paymentResult.paymentId,
+            orderData: paymentResult.data,
+          },
+          `${paymentMethod} order created successfully`
+        )
       );
-
     } catch (error) {
       next(error);
     }
@@ -107,9 +118,11 @@ const capturePayment = asyncHandler(
       const captureResult = await paymentService.capturePayment(paymentId);
 
       if (!captureResult.success) {
-        return res.status(400).json(
-          new ApiError(400, captureResult.error || "Payment capture failed")
-        );
+        return res
+          .status(400)
+          .json(
+            new ApiError(400, captureResult.error || "Payment capture failed")
+          );
       }
 
       // Now create the final order in database
@@ -117,16 +130,19 @@ const capturePayment = asyncHandler(
         ...orderData,
         userId,
         paymentMethod: paymentMethod.toUpperCase(),
-        paymentId: captureResult.paymentId
+        paymentId: captureResult.paymentId,
       });
 
       return res.status(200).json(
-        new ApiResponse(200, {
-          order: finalOrder,
-          paymentData: captureResult.data
-        }, "Payment captured and order created successfully")
+        new ApiResponse(
+          200,
+          {
+            order: finalOrder,
+            paymentData: captureResult.data,
+          },
+          "Payment captured and order created successfully"
+        )
       );
-
     } catch (error) {
       next(error);
     }
@@ -163,8 +179,8 @@ const createFinalOrderInDB = async (orderData: any) => {
         couponId: orderData.couponId,
         total: orderData.total,
         paymentMethod: orderData.paymentMethod,
-        paymentStatus: "COMPLETED",
-        paymentId: orderData.paymentId,
+        paymentStatus: "PENDING", // Start as pending
+        paymentId: orderData.paymentId, // ✅ Save payment ID for webhooks
         items: {
           create: orderData.items.map((item: any) => ({
             productId: item.productId,
@@ -193,7 +209,9 @@ const createFinalOrderInDB = async (orderData: any) => {
       });
     }
 
-    await prisma.cartItem.deleteMany({ where: { cart: { userId: orderData.userId } } });
+    await prisma.cartItem.deleteMany({
+      where: { cart: { userId: orderData.userId } },
+    });
     await prisma.cart.delete({ where: { userId: orderData.userId } });
 
     if (orderData.couponId) {
