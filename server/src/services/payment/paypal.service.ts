@@ -128,6 +128,42 @@ export class PayPalService implements PaymentMethod {
     }
   }
 
+    async verifyWebhookSignature(
+    body: any,
+    transmissionId: string,
+    timestamp: string,
+    signature: string,
+    certUrl: string
+  ): Promise<boolean> {
+    try {
+      const accessToken = await this.getAccessToken();
+      
+      const response = await axios.post(
+        `${this.baseApi}/v1/notifications/verify-webhook-signature`,
+        {
+          transmission_id: transmissionId,
+          transmission_time: timestamp,
+          transmission_sig: signature,
+          cert_url: certUrl,
+          auth_algo: 'SHA256withRSA',
+          webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+          webhook_event: body
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      );
+
+      return response.data.verification_status === 'SUCCESS';
+    } catch (error) {
+      console.error('PayPal webhook verification failed:', error);
+      return false;
+    }
+  }
+
   validatePayment(data: any): boolean {
     return !!(data.items && data.total && data.items.length > 0);
   }
