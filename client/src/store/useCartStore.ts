@@ -90,7 +90,6 @@ export const useCartStore = create<CartStore>((set, get) => {
           // ✅ Add headers for better debugging
           headers: {
             "Content-Type": "application/json",
-            "X-Debug": "true",
           },
         });
 
