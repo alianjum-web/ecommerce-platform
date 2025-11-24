@@ -106,92 +106,88 @@ const getCart = asyncHandler(
           .json(new ValidationError("Unauthorized user. Invalid userId."));
       }
 
-      // ✅ First, find or create the cart for the user
-      let cart = await prisma.cart.findUnique({
+      // ✅ Single query with joins - much more efficient
+      const cart = await prisma.cart.findUnique({
         where: { userId },
         include: {
-          items: true,
+          items: {
+            include: {
+              product: {
+                select: {
+                  name: true,
+                  price: true,
+                  images: true,
+                  // ✅ Add product availability check
+                  status: true,
+                  inventory: true,
+                }
+              }
+            }
+          },
         },
       });
 
-      // ✅ If cart doesn't exist, create an empty one
+      // ✅ If cart doesn't exist, return empty array (don't create until needed)
       if (!cart) {
-        console.log(`🛒 Creating new cart for user ${userId}`);
-        cart = await prisma.cart.create({
-          data: {
-            userId: userId,
-            items: {
-              create: [] // Empty cart
-            }
-          },
-          include: {
-            items: true,
-          },
-        });
-      }
-
-      // ✅ If cart exists but has no items, return empty array
-      if (cart.items.length === 0) {
         return res
           .status(200)
           .json(
-            new ApiResponse(
-              200,
-              [],
-              "Cart is empty"
-            )
+            new ApiResponse(200, [], "Cart is empty")
           );
       }
 
-      // ✅ Get product details for cart items
-      const cartItemsWithProducts = await Promise.all(
-        cart.items.map(async (item) => {
-          const product = await prisma.product.findUnique({
-            where: { id: item.productId },
-            select: {
-              name: true,
-              price: true,
-              images: true,
-            },
-          });
-
-          // ✅ Handle case where product might be deleted
-          if (!product) {
-            console.warn(`⚠️ Product ${item.productId} not found, removing from cart`);
-            // Optional: Remove deleted product from cart
-            await prisma.cartItem.delete({
-              where: { id: item.id }
-            });
-            return null;
+      // ✅ Process items in memory (much faster)
+      const validCartItems = cart.items
+        .filter(item => {
+          // ✅ Filter out items with deleted/unavailable products
+          if (!item.product) {
+            console.warn(`⚠️ Product ${item.productId} not found`);
+            return false;
           }
-
-          return {
-            id: item.id,
-            productId: item.productId,
-            name: product.name,
-            price: product.price,
-            image: product.images[0],
-            color: item.color,
-            size: item.size,
-            quantity: item.quantity,
-          };
+          
+          // ✅ Check if product is available
+          if (item.product.status !== 'ACTIVE') {
+            console.warn(`⚠️ Product ${item.productId} is not active`);
+            return false;
+          }
+          
+          return true;
         })
-      );
+        .map(item => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.product.name,
+          price: item.product.price,
+          image: item.product.images[0],
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          // ✅ Add product availability info
+          available: item.product.inventory > 0,
+          maxQuantity: Math.min(item.quantity, item.product.inventory),
+        }));
 
-      // ✅ Filter out null items (deleted products)
-      const validCartItems = cartItemsWithProducts.filter(item => item !== null);
+      // ✅ Clean up invalid items in background (non-blocking)
+      if (validCartItems.length !== cart.items.length) {
+        const invalidItemIds = cart.items
+          .filter(item => !item.product || item.product.status !== 'ACTIVE')
+          .map(item => item.id);
+        
+        if (invalidItemIds.length > 0) {
+          // Don't await - let it run in background
+          prisma.cartItem.deleteMany({
+            where: { id: { in: invalidItemIds } }
+          }).catch(console.error);
+        }
+      }
 
       res
         .status(200)
         .json(
-          new ApiResponse(
-            200,
-            validCartItems,
-            "Cart fetched successfully"
-          )
+          new ApiResponse(200, validCartItems, "Cart fetched successfully")
         );
-    } catch (e) {
-      console.error("❌ getCart error:", e);
+    } catch (error) {
+      console.error("❌ getCart error:", error);
       res.status(500).json(new ApiError(500, "Failed to fetch cart!"));
     }
   }
