@@ -96,99 +96,45 @@ const addToCart = asyncHandler(
 const getCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const rawUserId = req.user?.userId;
-      const userId =
-        typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
-
-      if (!userId || Number.isNaN(userId)) {
-        return res
-          .status(401)
-          .json(new ValidationError("Unauthorized user. Invalid userId."));
+      const userId = req.user?.userId;
+      
+      if (!userId || typeof userId !== 'number') {
+        return res.status(401).json(new ValidationError("Unauthorized user"));
       }
 
-      // ✅ Single query with joins - much more efficient
-      const cart = await prisma.cart.findUnique({
-        where: { userId },
-        include: {
-          items: {
-            include: {
-              product: {
-                select: {
-                  name: true,
-                  price: true,
-                  images: true,
-                  // ✅ Add product availability check
-                  status: true,
-                  inventory: true,
-                }
-              }
-            }
-          },
-        },
-      });
+      const cart = await CartService.getOrCreateCart(userId);
+      const validationIssues = await CartService.validateCartItems(cart.items);
 
-      // ✅ If cart doesn't exist, return empty array (don't create until needed)
-      if (!cart) {
-        return res
-          .status(200)
-          .json(
-            new ApiResponse(200, [], "Cart is empty")
-          );
-      }
-
-      // ✅ Process items in memory (much faster)
-      const validCartItems = cart.items
-        .filter(item => {
-          // ✅ Filter out items with deleted/unavailable products
-          if (!item.product) {
-            console.warn(`⚠️ Product ${item.productId} not found`);
-            return false;
-          }
-          
-          // ✅ Check if product is available
-          if (item.product.status !== 'ACTIVE') {
-            console.warn(`⚠️ Product ${item.productId} is not active`);
-            return false;
-          }
-          
-          return true;
-        })
+      const cartItems = cart.items
+        .filter(item => item.product !== null)
         .map(item => ({
           id: item.id,
-          productId: item.productId,
+          productId: item.product.id,
           name: item.product.name,
           price: item.product.price,
           image: item.product.images[0],
           color: item.color,
           size: item.size,
           quantity: item.quantity,
-          // ✅ Add product availability info
-          available: item.product.inventory > 0,
-          maxQuantity: Math.min(item.quantity, item.product.inventory),
+          maxQuantity: item.product.stock,
+          isAvailable: item.product.stock >= item.quantity,
+          isFeatured: item.product.isFeatured,
         }));
 
-      // ✅ Clean up invalid items in background (non-blocking)
-      if (validCartItems.length !== cart.items.length) {
-        const invalidItemIds = cart.items
-          .filter(item => !item.product || item.product.status !== 'ACTIVE')
-          .map(item => item.id);
-        
-        if (invalidItemIds.length > 0) {
-          // Don't await - let it run in background
-          prisma.cartItem.deleteMany({
-            where: { id: { in: invalidItemIds } }
-          }).catch(console.error);
-        }
-      }
+      res.status(200).json(new ApiResponse(
+        200, 
+        { 
+          items: cartItems, 
+          validationIssues,
+          totalItems: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+          totalPrice: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        },
+        "Cart fetched successfully"
+      ));
 
-      res
-        .status(200)
-        .json(
-          new ApiResponse(200, validCartItems, "Cart fetched successfully")
-        );
     } catch (error) {
       console.error("❌ getCart error:", error);
-      res.status(500).json(new ApiError(500, "Failed to fetch cart!"));
+      res.status(500).json(new ApiError(500, "Failed to fetch cart"));
     }
   }
 );
