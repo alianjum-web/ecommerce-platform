@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Modern e-commerce platform",
 };
 
-// This runs on server to prevent flash of wrong theme
+// Theme initialization script
 function ThemeScript() {
   return (
     <script
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <ThemeScript />
       </head>
