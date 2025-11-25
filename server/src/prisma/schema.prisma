@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id           Int     @id      @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   name         String?
   email        String    @unique
   password     String
@@ -22,7 +22,7 @@ model User {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   brand       String
   description String
@@ -35,32 +35,39 @@ model Product {
   soldCount   Int
   rating      Float?
   images      String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isFeatured  Boolean  @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  isFeatured  Boolean     @default(false)
+  cartItems   CartItem[] // ✅ Reverse relation
+  orderItems  OrderItem[] // ✅ Also add this for OrderItem relation
 }
 
 model Cart {
   id        String     @id @default(cuid())
-  userId    Int     @unique
+  userId    Int        @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
+
+  @@index([updatedAt])
 }
 
 model CartItem {
   id        String   @id @default(cuid())
   cartId    String
   productId String
-  quantity  Int
+  quantity  Int      @default(1)
   size      String?
   color     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  cart      Cart     @relation(fields: [cartId], references: [id])
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productId, size, color])
+  @@index([productId])
+  @@index([cartId, productId])
 }
 
 model FeatureBanner {
@@ -99,7 +106,7 @@ model Address {
   isDefault  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders     Order[]
 
   @@index([userId])
@@ -114,24 +121,24 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentMethod PaymentMethod
   paymentStatus PaymentStatus @default(PENDING)
-  paymentId     String?       // ✅ ADD THIS LINE - Make it optional
+  paymentId     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  address       Address       @relation(fields: [addressId], references: [id])
-  coupon        Coupon?       @relation(fields: [couponId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  address       Address       @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   items         OrderItem[]
 
   @@index([userId])
   @@index([addressId])
   @@index([couponId])
-  @@index([paymentId]) // ✅ Add index for better performance
+  @@index([paymentId])
 }
 
 model OrderItem {
   id              String   @id @default(cuid())
   orderId         String
-  productId       String
+  productId       String?
   productName     String
   productCategory String
   quantity        Int
@@ -140,7 +147,8 @@ model OrderItem {
   price           Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  order           Order    @relation(fields: [orderId], references: [id])
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull) // ✅ Add this relation
 
   @@index([orderId])
   @@index([productId])
