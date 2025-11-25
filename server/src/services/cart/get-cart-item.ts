@@ -1,0 +1,54 @@
+import {  prisma } from "../../server"
+
+export class CartService {
+  static async getOrCreateCart(userId: number) {
+    return await prisma.cart.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                images: true,
+                stock: true,
+                isFeatured: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+  }
+
+  static async validateCartItems(cartItems: any[]) {
+    const issues = [];
+    
+    for (const item of cartItems) {
+      if (!item.product) {
+        issues.push({ itemId: item.id, issue: 'PRODUCT_NOT_FOUND' });
+        continue;
+      }
+      
+      if (item.quantity > item.product.stock) {
+        issues.push({ 
+          itemId: item.id, 
+          issue: 'INSUFFICIENT_STOCK',
+          available: item.product.stock,
+          requested: item.quantity
+        });
+      }
+      
+      if (item.product.stock === 0) {
+        issues.push({ itemId: item.id, issue: 'OUT_OF_STOCK' });
+      }
+    }
+    
+    return issues;
+  }
+}
