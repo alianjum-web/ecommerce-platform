@@ -4,6 +4,7 @@ import { prisma } from "../server";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError, ValidationError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
+import { CartService } from "../services/cart/get-cart-item";
 
 const addToCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
