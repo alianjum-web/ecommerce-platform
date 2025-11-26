@@ -302,7 +302,7 @@ const getOrdersByUserId = asyncHandler(
     const { orderId } = req.params;
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId, userId: userId },
+      where: { id: orderId, userId: userId },  // users see it's own orders 
       include: {
         items: true,
         address: true,
