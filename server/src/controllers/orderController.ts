@@ -1,40 +1,12 @@
-import axios from "axios";
 import { AuthenticatedRequest } from "../types/express";
 import { NextFunction, Response } from "express";
-import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../server";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
-import { getErrorMessage } from "../utils/catchError";
+// import { getErrorMessage } from "../utils/catchError";
 import { PaymentFactory } from "../services/payment/payment.factory";
 import { PaymentOrderData } from "../interfaces/payment.interface";
-
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET!;
-const PAYPAL_BASE_API =
-  process.env.PAYPAL_MODE === "live"
-    ? "https://api-m.paypal.com"
-    : "${PAYPAL_BASE_API}";
-
-async function getPaypalAccessToken() {
-  const base64Auth = Buffer.from(
-    `${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`
-  ).toString("base64");
-
-  const response = await axios.post(
-    `${PAYPAL_BASE_API}/v1/oauth2/token`,
-    "grant_type=client_credentials",
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${base64Auth}`,
-      },
-    }
-  );
-
-  return response.data.access_token;
-}
 
 const createPaymentOrder = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -149,7 +121,6 @@ const capturePayment = asyncHandler(
   }
 );
 
-// Updated final order creation
 const createFinalOrderInDB = async (orderData: any) => {
   return await prisma.$transaction(async (prisma) => {
     // Stock validation (your existing code)
