@@ -12,8 +12,8 @@ export class CartService {
             product: {
               select: {
                 id: true,
-                name: true,
                 price: true,
+                name: true,
                 images: true,
                 stock: true,
                 isFeatured: true,
@@ -32,7 +32,7 @@ export class CartService {
     for (const item of cartItems) {
       if (!item.product) {
         issues.push({ itemId: item.id, issue: 'PRODUCT_NOT_FOUND' });
-        continue;
+        continue;  // stop below code, and move to the next iteration
       }
       
       if (item.quantity > item.product.stock) {

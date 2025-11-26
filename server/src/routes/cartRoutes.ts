@@ -9,6 +9,8 @@ import {
 } from "../controllers/cartController";
 import { validate } from "../middleware/validation";
 import { addToCartSchema } from "../validations/cartSchema";
+import { prisma } from "../server";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = express.Router();
 
@@ -24,5 +26,6 @@ router.post(
 router.delete("/remove/:id", authenticateJwt, removeFromCart);
 router.put("/update/:id", authenticateJwt, updateCartItemQuantity);
 router.post("/clear-cart", authenticateJwt, clearEntireCart);
+
 
 export default router;
