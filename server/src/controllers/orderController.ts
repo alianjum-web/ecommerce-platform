@@ -3,7 +3,7 @@ import { NextFunction, Response } from "express";
 import { prisma } from "../server";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
-import { ApiError } from "../utils/ApiError";
+import { ApiError, UnauthorizedError } from "../utils/ApiError";
 // import { getErrorMessage } from "../utils/catchError";
 import { PaymentFactory } from "../services/payment/payment.factory";
 import { PaymentOrderData } from "../interfaces/payment.interface";
@@ -260,7 +260,7 @@ const getAllOrdersForAdmin = asyncHandler(
     const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(404).json(new ApiResponse(404, "Unauthenticated user"));
+      return res.status(404).json(new UnauthorizedError("Unauthenticated user"));
     }
 
     const orders = await prisma.order.findMany({
