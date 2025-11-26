@@ -1,8 +1,12 @@
 // services/payment/paypal.service.ts
-import { PaymentMethod, PaymentOrderData, PaymentResult } from '../../interfaces/payment.interface';
-import axios from 'axios';
+import {
+  PaymentMethod,
+  PaymentOrderData,
+  PaymentResult,
+} from "../../interfaces/payment.interface";
+import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { getErrorMessage } from '../../utils/catchError';
+import { getErrorMessage } from "../../utils/catchError";
 
 export class PayPalService implements PaymentMethod {
   private clientId: string;
@@ -12,9 +16,10 @@ export class PayPalService implements PaymentMethod {
   constructor() {
     this.clientId = process.env.PAYPAL_CLIENT_ID!;
     this.clientSecret = process.env.PAYPAL_CLIENT_SECRET!;
-    this.baseApi = process.env.PAYPAL_MODE === "live" 
-      ? "https://api-m.paypal.com" 
-      : "https://api-m.sandbox.paypal.com";
+    this.baseApi =
+      process.env.PAYPAL_MODE === "live"
+        ? "https://api-m.paypal.com"
+        : "https://api-m.sandbox.paypal.com";
   }
 
   private async getAccessToken(): Promise<string> {
@@ -53,7 +58,8 @@ export class PayPalService implements PaymentMethod {
       }));
 
       const itemTotal = paypalItems.reduce(
-        (sum, item) => sum + parseFloat(item.unit_amount.value) * parseInt(item.quantity),
+        (sum, item) =>
+          sum + parseFloat(item.unit_amount.value) * parseInt(item.quantity),
         0
       );
 
@@ -90,12 +96,12 @@ export class PayPalService implements PaymentMethod {
         success: true,
         paymentId: response.data.id,
         orderId: response.data.id,
-        data: response.data
+        data: response.data,
       };
     } catch (error) {
       return {
         success: false,
-        error: getErrorMessage(error)
+        error: getErrorMessage(error),
       };
     }
   }
@@ -118,17 +124,17 @@ export class PayPalService implements PaymentMethod {
       return {
         success: true,
         paymentId: response.data.id,
-        data: response.data
+        data: response.data,
       };
     } catch (error) {
       return {
         success: false,
-        error: getErrorMessage(error)
+        error: getErrorMessage(error),
       };
     }
   }
 
-    async verifyWebhookSignature(
+  async verifyWebhookSignature(
     body: any,
     transmissionId: string,
     timestamp: string,
@@ -137,7 +143,7 @@ export class PayPalService implements PaymentMethod {
   ): Promise<boolean> {
     try {
       const accessToken = await this.getAccessToken();
-      
+
       const response = await axios.post(
         `${this.baseApi}/v1/notifications/verify-webhook-signature`,
         {
@@ -145,21 +151,21 @@ export class PayPalService implements PaymentMethod {
           transmission_time: timestamp,
           transmission_sig: signature,
           cert_url: certUrl,
-          auth_algo: 'SHA256withRSA',
+          auth_algo: "SHA256withRSA",
           webhook_id: process.env.PAYPAL_WEBHOOK_ID,
-          webhook_event: body
+          webhook_event: body,
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          }
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
       );
 
-      return response.data.verification_status === 'SUCCESS';
+      return response.data.verification_status === "SUCCESS";
     } catch (error) {
-      console.error('PayPal webhook verification failed:', error);
+      console.error("PayPal webhook verification failed:", error);
       return false;
     }
   }

@@ -29,6 +29,6 @@ export class PaymentFactory {
   }
 
   static getAvailableMethods(): string[] {
-    return ["PAYPAL", "STRIPE", "CARD", "VISA", "MASTERCARD"];
+    return ["PAYPAL", "STRIPE", "CREDIT_CARD"];
   }
 }

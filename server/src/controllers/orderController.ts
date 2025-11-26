@@ -3,7 +3,7 @@ import { NextFunction, Response } from "express";
 import { prisma } from "../server";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
-import { ApiError, UnauthorizedError } from "../utils/ApiError";
+import { ApiError, InternalServerError, UnauthorizedError } from "../utils/ApiError";
 // import { getErrorMessage } from "../utils/catchError";
 import { PaymentFactory } from "../services/payment/payment.factory";
 import { PaymentOrderData } from "../interfaces/payment.interface";
@@ -79,8 +79,16 @@ const createPaymentOrder = asyncHandler(
 const capturePayment = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const { paymentId, paymentMethod, orderData } = req.body;
-    const userId = req.user?.userId;
 
+    // Add validation:
+    if (!paymentId || !paymentMethod || !orderData) {
+      throw new ApiError(
+        400,
+        "Missing required fields: paymentId, paymentMethod, orderData"
+      );
+    }
+
+    const userId = req.user?.userId;
     if (!userId) {
       return res.status(401).json(new ApiError(401, "Unauthorized user"));
     }
@@ -122,80 +130,89 @@ const capturePayment = asyncHandler(
 );
 
 const createFinalOrderInDB = async (orderData: any) => {
-  return await prisma.$transaction(async (prisma) => {
-    // Stock validation (your existing code)
-    for (const item of orderData.items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { stock: true, name: true },
-      });
-
-      if (!product) {
-        throw new ApiError(404, `Product ${item.productId} not found`);
+  try {   
+    return await prisma.$transaction(async (prisma) => {
+      // Stock validation (your existing code)
+      for (const item of orderData.items) {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId },
+          select: { stock: true, name: true },
+        });
+  
+        if (!product) {
+          throw new ApiError(404, `Product ${item.productId} not found`);
+        }
+  
+        if (product.stock < item.quantity) {
+          throw new ApiError(
+            400,
+            `Only ${product.stock} items left for ${product.name}`
+          );
+        }
       }
-
-      if (product.stock < item.quantity) {
-        throw new ApiError(
-          400,
-          `Only ${product.stock} items left for ${product.name}`
-        );
+  
+      // Create order
+      const newOrder = await prisma.order.create({
+        data: {
+          userId: orderData.userId,
+          addressId: orderData.addressId,
+          couponId: orderData.couponId,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: "COMPLETED", // After successful payment capture
+          status: "PROCESSING", // update order status
+          paymentId: orderData.paymentId, // Save payment ID for webhooks
+          items: {
+            create: orderData.items.map((item: any) => ({
+              productId: item.productId,
+              productName: item.productName,
+              productCategory: item.productCategory,
+              quantity: item.quantity,
+              size: item.size,
+              color: item.color,
+              price: item.price,
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+  
+      // Update stock and clear cart (your existing code)
+      for (const item of orderData.items) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+            soldCount: { increment: item.quantity },
+          },
+        });
       }
-    }
-
-    // Create order
-    const newOrder = await prisma.order.create({
-      data: {
-        userId: orderData.userId,
-        addressId: orderData.addressId,
-        couponId: orderData.couponId,
-        total: orderData.total,
-        paymentMethod: orderData.paymentMethod,
-        paymentStatus: "PENDING", // Start as pending
-        paymentId: orderData.paymentId, // ✅ Save payment ID for webhooks
-        items: {
-          create: orderData.items.map((item: any) => ({
-            productId: item.productId,
-            productName: item.productName,
-            productCategory: item.productCategory,
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color,
-            price: item.price,
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    // Update stock and clear cart (your existing code)
-    for (const item of orderData.items) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: {
-          stock: { decrement: item.quantity },
-          soldCount: { increment: item.quantity },
-        },
+  
+      await prisma.cartItem.deleteMany({
+        where: { cart: { userId: orderData.userId } },
       });
-    }
-
-    await prisma.cartItem.deleteMany({
-      where: { cart: { userId: orderData.userId } },
+      await prisma.cart.delete({ where: { userId: orderData.userId } });
+  
+      if (orderData.couponId) {
+        await prisma.coupon.update({
+          where: { id: orderData.couponId },
+          data: {
+            usageCount: { increment: 1 },
+          },
+        });
+      }
+  
+      return newOrder;
     });
-    await prisma.cart.delete({ where: { userId: orderData.userId } });
-
-    if (orderData.couponId) {
-      await prisma.coupon.update({
-        where: { id: orderData.couponId },
-        data: {
-          usageCount: { increment: 1 },
-        },
-      });
+  } catch (error) {
+     if (error instanceof ApiError) {
+      throw error;
     }
-
-    return newOrder;
-  });
+    // Handle Prisma errors
+    throw new InternalServerError("Failed to create order in database");
+  }
 };
 
 const getOrder = asyncHandler(
@@ -260,7 +277,9 @@ const getAllOrdersForAdmin = asyncHandler(
     const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(404).json(new UnauthorizedError("Unauthenticated user"));
+      return res
+        .status(401)
+        .json(new UnauthorizedError("Unauthenticated user"));
     }
 
     const orders = await prisma.order.findMany({
@@ -297,12 +316,12 @@ const getOrdersByUserId = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(404).json(new ApiResponse(404, "Unauthenticated user"));
+      return res.status(401).json(new ApiResponse(401, "Unauthenticated user"));
     }
     const { orderId } = req.params;
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId, userId: userId },  // users see it's own orders 
+      where: { id: orderId, userId: userId }, // users see it's own orders
       include: {
         items: true,
         address: true,
