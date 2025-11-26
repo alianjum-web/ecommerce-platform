@@ -14,15 +14,20 @@ function getCartItems(items: any): any[] {
   if (Array.isArray(items)) {
     return items;
   }
-  
-  if (items && typeof items === 'object' && Array.isArray(items.items)) {
+
+  if (items && typeof items === "object" && Array.isArray(items.items)) {
     return items.items;
   }
-  
-  if (items && typeof items === 'object' && items.data && Array.isArray(items.data.items)) {
+
+  if (
+    items &&
+    typeof items === "object" &&
+    items.data &&
+    Array.isArray(items.data.items)
+  ) {
     return items.data.items;
   }
-  
+
   return [];
 }
 
@@ -59,6 +64,7 @@ function UserCartPage() {
 
   // ✅ FIX: Use the type-safe function
   const cartItems = getCartItems(items);
+  console.log("My cart items is ", cartItems);
   const total = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -91,7 +97,7 @@ function UserCartPage() {
     <div className="min-h-screen bg-white py-8">
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold text-center mb-8">YOUR CART</h1>
-        
+
         {cartItems.length === 0 ? (
           <div className="text-center py-16">
             <h2 className="text-2xl font-semibold mb-4">Your cart is empty</h2>
@@ -126,7 +132,9 @@ function UserCartPage() {
                             <p className="text-sm text-gray-700">
                               Color: {item.color}
                             </p>
-                            <p className="text-sm text-gray-700">Size: {item.size}</p>
+                            <p className="text-sm text-gray-700">
+                              Size: {item.size}
+                            </p>
                             <Button
                               disabled={isUpdating}
                               onClick={() => handleRemoveItem(item.id)}
