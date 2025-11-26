@@ -98,8 +98,8 @@ const getCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.userId;
-      
-      if (!userId || typeof userId !== 'number') {
+
+      if (!userId || typeof userId !== "number") {
         return res.status(401).json(new ValidationError("Unauthorized user"));
       }
 
@@ -107,8 +107,8 @@ const getCart = asyncHandler(
       const validationIssues = await CartService.validateCartItems(cart.items);
 
       const cartItems = cart.items
-        .filter(item => item.product !== null)
-        .map(item => ({
+        .filter((item) => item.product !== null)
+        .map((item) => ({
           id: item.id,
           productId: item.product.id,
           name: item.product.name,
@@ -122,17 +122,21 @@ const getCart = asyncHandler(
           isFeatured: item.product.isFeatured,
         }));
 
-      res.status(200).json(new ApiResponse(
-        200, 
-        { 
-          items: cartItems, 
-          validationIssues,
-          totalItems: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-          totalPrice: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-        },
-        "Cart fetched successfully"
-      ));
-
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            items: cartItems,
+            validationIssues,
+            totalItems: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+            totalPrice: cartItems.reduce(
+              (sum, item) => sum + item.price * item.quantity,
+              0
+            ),
+          },
+          "Cart fetched successfully"
+        )
+      );
     } catch (error) {
       console.error("❌ getCart error:", error);
       res.status(500).json(new ApiError(500, "Failed to fetch cart"));
