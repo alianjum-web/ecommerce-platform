@@ -2,6 +2,7 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 import type { Product } from "@/types/product";
+import { renderToHTML } from "next/dist/server/render";
 
 interface ProductFilters {
   page?: number;
@@ -43,8 +44,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchAllProductsForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
-      console.log("Fetching admin products...");
-
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-admin-products`,
         {
@@ -52,16 +51,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
       );
 
-      console.log("Admin products fetched successfully:", response.data);
-
-      // ✅ FIX: Properly extract products from response
       const productsData =
         response.data.data?.items ||
         response.data.items ||
         response.data.data ||
         [];
-
-      console.log("Extracted products:", productsData);
 
       set({
         products: productsData,
@@ -154,7 +148,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const response = await axios.get(`${API_ROUTES.PRODUCTS}/${id}`, {
         withCredentials: true,
       });
-      
+
       set({ isLoading: false });
       return response.data.data;
     } catch (error: any) {
