@@ -4,45 +4,16 @@ import {
   PaymentOrderData,
   PaymentResult,
 } from "../../interfaces/payment.interface";
+import {
+  PayPalAccessTokenResponse,
+  PayPalOrderResponse,
+  PayPalCaptureResponse,
+  PayPalWebhookVerificationResponse,
+  PayPalItem,
+} from "../../interfaces/paypal.interface.response";
 import axios, { AxiosResponse, AxiosError } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { getErrorMessage } from "../../utils/catchError";
-
-// Types for PayPal API responses
-interface PayPalAccessTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-interface PayPalOrderResponse {
-  id: string;
-  status: string;
-  links: Array<{ href: string; rel: string; method: string }>;
-}
-
-interface PayPalCaptureResponse {
-  id: string;
-  status: string;
-  payer: any;
-  purchase_units: any[];
-}
-
-interface PayPalWebhookVerificationResponse {
-  verification_status: "SUCCESS" | "FAILED";
-}
-
-interface PayPalItem {
-  name: string;
-  description: string;
-  sku: string;
-  unit_amount: {
-    currency_code: string;
-    value: string;
-  };
-  quantity: string;
-  category: "PHYSICAL_GOODS" | "DIGITAL_GOODS" | "DONATION";
-}
 
 export class PayPalService implements PaymentMethod {
   private clientId: string;
@@ -65,7 +36,7 @@ export class PayPalService implements PaymentMethod {
 
   private validateConfiguration(): void {
     const missingVars: string[] = [];
-    
+
     if (!this.clientId) missingVars.push("PAYPAL_CLIENT_ID");
     if (!this.clientSecret) missingVars.push("PAYPAL_CLIENT_SECRET");
     if (!process.env.PAYPAL_WEBHOOK_ID) missingVars.push("PAYPAL_WEBHOOK_ID");
@@ -79,7 +50,11 @@ export class PayPalService implements PaymentMethod {
 
   private async getAccessToken(): Promise<string> {
     // Return cached token if it's still valid (with 1-minute buffer)
-    if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry - 60000) {
+    if (
+      this.accessToken &&
+      this.tokenExpiry &&
+      Date.now() < this.tokenExpiry - 60000
+    ) {
       return this.accessToken;
     }
 
@@ -88,26 +63,29 @@ export class PayPalService implements PaymentMethod {
     ).toString("base64");
 
     try {
-      const response: AxiosResponse<PayPalAccessTokenResponse> = await axios.post(
-        `${this.baseApi}/v1/oauth2/token`,
-        "grant_type=client_credentials",
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${base64Auth}`,
-          },
-          timeout: this.timeout,
-        }
-      );
+      const response: AxiosResponse<PayPalAccessTokenResponse> =
+        await axios.post(
+          `${this.baseApi}/v1/oauth2/token`,
+          "grant_type=client_credentials",
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Authorization: `Basic ${base64Auth}`,
+            },
+            timeout: this.timeout,
+          }
+        );
 
       this.accessToken = response.data.access_token;
-      this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
-      
+      this.tokenExpiry = Date.now() + response.data.expires_in * 1000;
+
       return this.accessToken;
     } catch (error) {
       this.accessToken = null;
       this.tokenExpiry = null;
-      throw new Error(`Failed to get PayPal access token: ${getErrorMessage(error)}`);
+      throw new Error(
+        `Failed to get PayPal access token: ${getErrorMessage(error)}`
+      );
     }
   }
 
@@ -136,12 +114,16 @@ export class PayPalService implements PaymentMethod {
       });
 
       // Log successful request
-      console.log(`PayPal API ${method} ${url}: ${Date.now() - startTime}ms - RequestID: ${requestId}`);
-      
+      console.log(
+        `PayPal API ${method} ${url}: ${
+          Date.now() - startTime
+        }ms - RequestID: ${requestId}`
+      );
+
       return response;
     } catch (error) {
       const axiosError = error as AxiosError;
-      
+
       // Log error with context
       console.error(`PayPal API Error ${method} ${url}:`, {
         status: axiosError.response?.status,
@@ -151,10 +133,12 @@ export class PayPalService implements PaymentMethod {
       });
 
       // Retry logic for 5xx errors and network issues
-      if (retryCount < 2 && (
-        !axiosError.response || 
-        (axiosError.response.status >= 500 && axiosError.response.status < 600)
-      )) {
+      if (
+        retryCount < 2 &&
+        (!axiosError.response ||
+          (axiosError.response.status >= 500 &&
+            axiosError.response.status < 600))
+      ) {
         console.log(`Retrying PayPal request (${retryCount + 1}/2)...`);
         await this.delay(1000 * (retryCount + 1)); // Exponential backoff
         return this.makePayPalRequest<T>(method, url, data, retryCount + 1);
@@ -165,17 +149,17 @@ export class PayPalService implements PaymentMethod {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private isValidPayPalCertUrl(url: string): boolean {
     const validDomains = [
-      'api-m.paypal.com',
-      'api-m.sandbox.paypal.com',
-      'www.paypal.com',
-      'www.sandbox.paypal.com'
+      "api-m.paypal.com",
+      "api-m.sandbox.paypal.com",
+      "www.paypal.com",
+      "www.sandbox.paypal.com",
     ];
-    
+
     try {
       const certUrl = new URL(url);
       return validDomains.includes(certUrl.hostname);
@@ -208,7 +192,8 @@ export class PayPalService implements PaymentMethod {
 
       // Calculate item total for validation
       const calculatedItemTotal = paypalItems.reduce(
-        (sum, item) => sum + parseFloat(item.unit_amount.value) * parseInt(item.quantity),
+        (sum, item) =>
+          sum + parseFloat(item.unit_amount.value) * parseInt(item.quantity),
         0
       );
 
@@ -280,12 +265,14 @@ export class PayPalService implements PaymentMethod {
 
       // Validate capture was successful
       const isSuccessful = response.data.status === "COMPLETED";
-      
+
       return {
         success: isSuccessful,
         paymentId: response.data.id,
         data: response.data,
-        ...(isSuccessful ? {} : { error: `Capture status: ${response.data.status}` }),
+        ...(isSuccessful
+          ? {}
+          : { error: `Capture status: ${response.data.status}` }),
       };
     } catch (error) {
       return {
@@ -305,29 +292,34 @@ export class PayPalService implements PaymentMethod {
     try {
       // Validate input parameters
       if (!transmissionId || !timestamp || !signature || !certUrl) {
-        console.error("Webhook verification failed: Missing required parameters");
+        console.error(
+          "Webhook verification failed: Missing required parameters"
+        );
         return false;
       }
 
       // Validate certificate URL to prevent SSRF attacks
       if (!this.isValidPayPalCertUrl(certUrl)) {
-        console.error(`Webhook verification failed: Invalid certificate URL: ${certUrl}`);
+        console.error(
+          `Webhook verification failed: Invalid certificate URL: ${certUrl}`
+        );
         return false;
       }
 
-      const response = await this.makePayPalRequest<PayPalWebhookVerificationResponse>(
-        "POST",
-        `${this.baseApi}/v1/notifications/verify-webhook-signature`,
-        {
-          transmission_id: transmissionId,
-          transmission_time: timestamp,
-          transmission_sig: signature,
-          cert_url: certUrl,
-          auth_algo: "SHA256withRSA",
-          webhook_id: process.env.PAYPAL_WEBHOOK_ID,
-          webhook_event: body,
-        }
-      );
+      const response =
+        await this.makePayPalRequest<PayPalWebhookVerificationResponse>(
+          "POST",
+          `${this.baseApi}/v1/notifications/verify-webhook-signature`,
+          {
+            transmission_id: transmissionId,
+            transmission_time: timestamp,
+            transmission_sig: signature,
+            cert_url: certUrl,
+            auth_algo: "SHA256withRSA",
+            webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+            webhook_event: body,
+          }
+        );
 
       return response.data.verification_status === "SUCCESS";
     } catch (error) {
@@ -346,7 +338,7 @@ export class PayPalService implements PaymentMethod {
     }
 
     const paymentData = data as { items?: unknown; total?: unknown };
-    
+
     if (!Array.isArray(paymentData.items) || paymentData.items.length === 0) {
       return false;
     }
@@ -356,14 +348,15 @@ export class PayPalService implements PaymentMethod {
     }
 
     // Validate each item
-    return paymentData.items.every((item: any) => 
-      item && 
-      typeof item.productId === "string" &&
-      typeof item.productName === "string" &&
-      typeof item.price === "number" && 
-      item.price >= 0 &&
-      typeof item.quantity === "number" && 
-      item.quantity > 0
+    return paymentData.items.every(
+      (item: any) =>
+        item &&
+        typeof item.productId === "string" &&
+        typeof item.productName === "string" &&
+        typeof item.price === "number" &&
+        item.price >= 0 &&
+        typeof item.quantity === "number" &&
+        item.quantity > 0
     );
   }
 
