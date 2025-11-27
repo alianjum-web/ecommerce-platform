@@ -154,9 +154,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const response = await axios.get(`${API_ROUTES.PRODUCTS}/${id}`, {
         withCredentials: true,
       });
-
+      
       set({ isLoading: false });
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error("Failed to fetch product:", error);
       set({
