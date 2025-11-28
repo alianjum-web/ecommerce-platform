@@ -30,7 +30,7 @@ async function setTokens(
     secure: isProd, // ✅ HTTPS only in production
     sameSite: isProd ? "none" : "lax", // ✅ "none" for cross-site + secure
     path: "/",
-    maxAge: 60 * 60 * 1000, // 1 hour for access token
+    maxAge: 60 * 60 , // 1 hour for access token
   } as const;
 
   // Access Token Cookie
