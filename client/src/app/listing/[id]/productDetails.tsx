@@ -20,22 +20,21 @@ function ProductDetailsContent({ id }: { id: string }) {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
 
- useEffect(() => {
-  const fetchProduct = async () => {
-    const productDetails = await getProductById(id);
-    
-    // ✅ TODO: Handle nested response structure
-    const productData = productDetails;
-    
-    if (productData) {
-      setProduct(productData);
-    } else {
-      router.push("/404");
-    }
-  };
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const productDetails = await getProductById(id);
 
-  fetchProduct();
-}, [id, getProductById, router]);
+      const productData = productDetails;
+
+      if (productData) {
+        setProduct(productData);
+      } else {
+        router.push("/404");
+      }
+    };
+
+    fetchProduct();
+  }, [id, getProductById, router]);
 
   const handleAddToCart = () => {
     if (product) {
