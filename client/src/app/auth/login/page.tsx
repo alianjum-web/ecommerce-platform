@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import { warmupService } from "@/utils/warmupService";
 
 const ROUTES = {
   SUPER_ADMIN: "/super-admin",
@@ -20,6 +21,7 @@ const ROUTES = {
 } as const;
 
 function LoginPage() {
+  const [isWarming, setIsWarming] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,7 +31,17 @@ function LoginPage() {
   const { login, isLoading, user, error } = useAuthStore();
   const router = useRouter();
 
-  // ✅ SIMPLIFIED: Single redirect effect
+  useEffect(() => {
+    const pre = async() => {
+      if (warmupService.shouldWarm()) {
+        setIsWarming(true);
+        await warmupService.warmBackend();
+        setIsWarming(false);
+      }
+    }
+    pre();
+  }, [])
+
   useEffect(() => {
     if (user) {
       console.log("🎯 User authenticated, redirecting...");
@@ -38,7 +50,6 @@ function LoginPage() {
     }
   }, [user, router]);
 
-  // ✅ SIMPLIFIED: Clean form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -53,6 +64,13 @@ function LoginPage() {
     }
 
     try {
+      // 🔥 Ensure backend is warm before login
+      if (warmupService.shouldWarm()) {
+        setIsWarming(true);
+        await warmupService.ensureWarm();
+        setIsWarming(false);
+      }
+
       const success = await login(formData.email, formData.password);
 
       if (success) {
@@ -81,6 +99,8 @@ function LoginPage() {
       }));
     };
 
+    const isSubmitDisabled = isLoading || isWarming;
+
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">
       {/* Banner Section */}
@@ -97,6 +117,20 @@ function LoginPage() {
       {/* Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col p-8 lg:p-16 justify-center">
         <div className="max-w-md w-full mx-auto">
+
+         {/* 🔥 ADD WARMUP STATUS INDICATOR */}
+          {isWarming && (
+            <div className="mb-4 p-3 bg-blue-100 border border-blue-400 rounded text-sm text-blue-800">
+              <p>🔥 Warming up services... One moment please</p>
+            </div>
+          )}
+          
+          {/* 🔥 ADD COLD START WARNING */}
+          <div className="mb-6 p-3 bg-yellow-100 border border-yellow-400 rounded text-sm">
+            <p>⏱️ First login may take 10-15 seconds while services start</p>
+            <p className="text-xs mt-1">Subsequent logins will be faster (2-4 seconds)</p>
+          </div>
+
           <div className="flex justify-center mb-8">
             <Image src={logo} width={200} height={50} alt="Company Logo" priority />
           </div>

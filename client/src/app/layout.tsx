@@ -1,9 +1,10 @@
-// app/layout.tsx
+// app/layout.tsx - UPDATED
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import CommonLayout from "@/components/common/layout";
 import AuthProvider from "@/components/layout/AuthProvider";
+import { WarmupProvider } from "@/components/providers/warmUpProvider";
 
 export const metadata: Metadata = {
   title: "Your E-Commerce App",
@@ -41,9 +42,11 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body className="antialiased">
-        <AuthProvider>
-          <CommonLayout>{children}</CommonLayout>
-        </AuthProvider>
+        <WarmupProvider>
+          <AuthProvider>
+            <CommonLayout>{children}</CommonLayout>
+          </AuthProvider>
+        </WarmupProvider>
         <Toaster />
       </body>
     </html>
