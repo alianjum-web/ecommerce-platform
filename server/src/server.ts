@@ -10,6 +10,7 @@ import settingsRoutes from "./routes/settingRoutes";
 import cartRoutes from "./routes/cartRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import warmRoutes from "./routes/warm"
 import { ApiError } from "./utils/ApiError";
 import { errorHandler } from "./middleware/errHandler";
 
@@ -66,6 +67,7 @@ app.use(cookieParser());
 export const prisma = new PrismaClient();
 
 // Routes
+app.use("/api/warm", warmRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/coupon", couponRoutes);
