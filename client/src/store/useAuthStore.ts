@@ -2,6 +2,7 @@
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { warmupService } from "@/utils/warmupService";
 
 type User = {
   id: string;
@@ -14,7 +15,11 @@ type AuthStore = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -24,7 +29,7 @@ type AuthStore = {
   // REMOVED: triggerRedirect - not needed
 };
 
-const getBaseURL = () => '/api/auth';
+const getBaseURL = () => "/api/auth";
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -43,7 +48,7 @@ export const useAuthStore = create<AuthStore>()(
       clearError: () => set({ error: null }),
 
       initialize: async () => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === "undefined") return;
         try {
           console.log("🔧 Initializing auth state...");
           const user = await get().fetchMe();
@@ -59,7 +64,11 @@ export const useAuthStore = create<AuthStore>()(
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post("/register", { name, email, password });
+          const response = await axiosInstance.post("/register", {
+            name,
+            email,
+            password,
+          });
           set({ isLoading: false });
           return response.data.userId;
         } catch (error: any) {
@@ -73,41 +82,32 @@ export const useAuthStore = create<AuthStore>()(
 
       login: async (email, password) => {
         set({ isLoading: true, error: null });
+
         try {
-          console.log("🔄 Login attempt started");
-          
-          const response = await axiosInstance.post("/login", { email, password });
-          console.log("✅ Login API response received");
+          console.log("🔄 Login process started");
 
+          // 🔥 CRITICAL: Ensure backend is warm before login
+          await warmupService.ensureWarm();
+
+          const response = await axiosInstance.post("/login", {
+            email,
+            password,
+          });
+
+          // Rest of your existing login logic...
           if (response.data.success && response.data.user) {
-            console.log("🎯 Login SUCCESS - User data:", response.data.user);
-            
-            // ✅ CRITICAL FIX: Force immediate state update
-            set({ 
-              isLoading: false, 
-              user: response.data.user, 
-              error: null 
+            console.log("✅ Login SUCCESS - User data:", response.data.user);
+            set({
+              isLoading: false,
+              user: response.data.user,
+              error: null,
             });
-
-            // ✅ PRODUCTION FIX: Force persistence and state sync
-            if (typeof window !== 'undefined') {
-              // Force Zustand to persist immediately
-              setTimeout(() => {
-                const currentState = get();
-                console.log("🔍 PRODUCTION - State after login:", currentState);
-                
-                // Trigger storage event to sync across tabs
-                window.dispatchEvent(new Event('storage'));
-              }, 100);
-            }
-
             return true;
           } else {
-            const errorMsg = response.data.error || "Login failed";
-            set({ isLoading: false, error: errorMsg });
-            return false;
+            throw new Error(response.data.error || "Login failed");
           }
         } catch (error: any) {
+          // Your existing error handling...
           console.error("❌ Login error:", error);
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
@@ -154,13 +154,13 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({ 
-        user: state.user 
+      partialize: (state) => ({
+        user: state.user,
       }),
       // ✅ PRODUCTION FIX: Better persistence configuration
       onRehydrateStorage: () => (state) => {
         console.log("🔄 Storage rehydrated:", state?.user);
-      }
+      },
     }
   )
 );
@@ -173,7 +173,9 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        const refreshSuccess = await useAuthStore
+          .getState()
+          .refreshAccessToken();
         if (refreshSuccess) return axiosInstance(originalRequest);
       } catch {
         useAuthStore.getState().logout();
