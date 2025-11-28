@@ -86,49 +86,95 @@ const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// UPDATED authController.ts - Login function
 const login = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  
   try {
     const { email, password } = req.body;
-    const extractCurrentUser = await prisma.user.findUnique({
-      where: { email },
-    });
-    
-    if (!extractCurrentUser || !(await bcrypt.compare(password, extractCurrentUser.password))) {
-      res.status(401).json({ success: false, error: "Invalid credentials" });
+
+    // Input validation
+    if (!email || !password) {
+      console.warn("❌ Missing credentials");
+      res.status(400).json({ 
+        success: false, 
+        error: "Email and password are required" 
+      });
       return;
     }
 
-    const accessToken = signAccessToken(
-      extractCurrentUser.id,
-      extractCurrentUser.email,
-      extractCurrentUser.role
-    );
-
-    const refreshToken = uuidv4();
-    const hashed = hashToken(refreshToken);
-
-    await prisma.user.update({
-      where: { id: extractCurrentUser.id },
-      data: { refreshToken: hashed },
+    console.log(`🔍 Attempting login for: ${email}`);
+    
+    // Optimized database query with select only needed fields
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        role: true,
+      }
     });
 
-    // Try to set cookies (for same-domain or compatible scenarios)
+    if (!user) {
+      console.warn(`❌ User not found: ${email}`);
+      res.status(401).json({ 
+        success: false, 
+        error: "Invalid credentials" 
+      });
+      return;
+    }
+
+    // Password comparison
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      console.warn(`❌ Invalid password for: ${email}`);
+      res.status(401).json({ 
+        success: false, 
+        error: "Invalid credentials" 
+      });
+      return;
+    }
+
+    // Generate tokens
+    const accessToken = signAccessToken(user.id, user.email, user.role);
+    const refreshToken = uuidv4();
+    const hashedRefreshToken = hashToken(refreshToken);
+
+    // Update user with refresh token (optimized)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
+
+    // Set cookies
     await setTokens(res, accessToken, refreshToken);
 
-    // ALSO return tokens in response body for cross-domain scenarios
+    const endTime = Date.now();
+    console.log(`✅ Login successful for ${email} in ${endTime - startTime}ms`);
+
+    // Response without sensitive data
     res.status(200).json({
       success: true,
-      message: "Login successfully",
+      message: "Login successful",
       user: {
-        id: extractCurrentUser.id,
-        name: extractCurrentUser.name,
-        email: extractCurrentUser.email,
-        role: extractCurrentUser.role,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
     });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Login failed" });
+    const endTime = Date.now();
+    console.error(`💥 Login error after ${endTime - startTime}ms:`, error);
+    
+    res.status(500).json({ 
+      success: false,
+      error: "Login failed - please try again" 
+    });
   }
 };
 
