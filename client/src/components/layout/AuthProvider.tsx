@@ -3,31 +3,39 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import useSilentAuth from "@/hooks/useSilentAuth";
 
-export default function AuthProvider({ children }: { children: React.ReactNode }) { 
+export default function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isInitialized, setIsInitialized] = useState(false);
   const { user, fetchMe, refreshAccessToken } = useAuthStore();
+
+  useSilentAuth();
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         console.log("🔄 Initializing authentication...");
-        
+
         // First, try to refresh token if we have cookies but no user
-        const hasRefreshToken = document.cookie.includes('refreshToken');
-        
+        const hasRefreshToken = document.cookie.includes("refreshToken");
+
         if (hasRefreshToken && !user) {
           console.log("🔄 Found refresh token, attempting refresh...");
           const refreshSuccess = await refreshAccessToken();
-          
+
           if (!refreshSuccess) {
-            console.log("❌ Token refresh failed, trying to fetch user directly...");
+            console.log(
+              "❌ Token refresh failed, trying to fetch user directly..."
+            );
             await fetchMe();
           }
         } else if (!user) {
           console.log("🔐 No existing session, skipping auth initialization");
         }
-        
       } catch (error) {
         console.error("Auth initialization error:", error);
       } finally {
