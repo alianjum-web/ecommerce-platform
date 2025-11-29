@@ -52,37 +52,20 @@ export const useCartStore = create<CartStore>((set, get) => {
     fetchCart: async () => {
       set({ isLoading: true, error: null });
       try {
-        console.log("🛒 [DEBUG] Starting fetchCart...");
-
         // ✅ Log the exact URL construction
         const baseUrl = API_ROUTES.CART;
         const fullUrl = `${baseUrl}/fetch-cart`;
 
-        console.log("🔗 [DEBUG] URL Breakdown:", {
-          baseUrl,
-          fullUrl,
-          NODE_ENV: process.env.NODE_ENV,
-          API_BASE_URL: process.env.NEXT_PUBLIC_API_URL,
-        });
-
-        // ✅ Test if the route exists with a simple fetch first
-        console.log("🧪 [DEBUG] Testing route existence...");
         try {
           const testResponse = await fetch(fullUrl, {
             method: "GET",
             credentials: "include",
-          });
-          console.log("🧪 [DEBUG] Route test result:", {
-            status: testResponse.status,
-            statusText: testResponse.statusText,
-            ok: testResponse.ok,
           });
         } catch (testError) {
           console.log("🧪 [DEBUG] Route test failed:", testError);
         }
 
         // ✅ Now try the actual axios call
-        console.log("🔄 [DEBUG] Making axios request to:", fullUrl);
 
         const response = await axios.get(fullUrl, {
           withCredentials: true,
@@ -93,14 +76,7 @@ export const useCartStore = create<CartStore>((set, get) => {
           },
         });
 
-        console.log("✅ [DEBUG] Axios response received:", {
-          status: response.status,
-          statusText: response.status,
-          data: response.data,
-        });
-
         const cartItems = response.data.data || response.data.items || [];
-        console.log("📦 [DEBUG] Cart items extracted:", cartItems);
 
         set({
           items: cartItems,
@@ -132,8 +108,6 @@ export const useCartStore = create<CartStore>((set, get) => {
     addToCart: async (item) => {
       set({ isLoading: true, error: null });
       try {
-        console.log("➕ Adding to cart:", item);
-
         const response = await axios.post(
           `${API_ROUTES.CART}/add-to-cart`,
           item,
@@ -141,8 +115,6 @@ export const useCartStore = create<CartStore>((set, get) => {
             withCredentials: true,
           }
         );
-
-        console.log("✅ Add to cart response:", response.data);
 
         set((state) => ({
           items: [...state.items, response.data.data],
@@ -160,8 +132,6 @@ export const useCartStore = create<CartStore>((set, get) => {
     removeFromCart: async (id) => {
       set({ isLoading: true, error: null });
       try {
-        console.log("🗑️ Removing from cart:", id);
-
         await axios.delete(`${API_ROUTES.CART}/remove/${id}`, {
           withCredentials: true,
         });
@@ -194,7 +164,6 @@ export const useCartStore = create<CartStore>((set, get) => {
     clearCart: async () => {
       set({ isLoading: true, error: null });
       try {
-        console.log("🧹 Clearing cart...");
 
         await axios.post(
           `${API_ROUTES.CART}/clear-cart`,

@@ -172,7 +172,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         brands: params.brands?.join(","),
       };
 
-      console.log("Fetching client products with params:", queryParams);
+      // console.log("Fetching client products with params:", queryParams);
 
       const response = await axios.get(
         `${API_ROUTES.PRODUCTS}/fetch-client-products`,
@@ -182,17 +182,17 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
       );
 
-      console.log("RESPONSE_OBJECT", response);
+      // console.log("RESPONSE_OBJECT", response);
 
       // ✅ FIX: Access the nested data structure correctly
       const responseData = response.data.data || response.data;
 
-      console.log("Client products fetched successfully:", {
-        productsCount: responseData.products?.length,
-        currentPage: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalProducts: responseData.totalProducts,
-      });
+      // console.log("Client products fetched successfully:", {
+      //   productsCount: responseData.products?.length,
+      //   currentPage: responseData.currentPage,
+      //   totalPages: responseData.totalPages,
+      //   totalProducts: responseData.totalProducts,
+      // });
 
       set({
         products: responseData.products || [],
