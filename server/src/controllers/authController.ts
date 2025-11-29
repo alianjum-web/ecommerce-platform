@@ -8,7 +8,7 @@ import crypto from "crypto";
 
 function signAccessToken(userId: number, email: string, role: string) {
   return jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
-    expiresIn: "3s",
+    expiresIn: "60s",
   });
 }
 
@@ -30,7 +30,7 @@ async function setTokens(
     secure: isProd, // ✅ HTTPS only in production
     sameSite: isProd ? "none" : "lax", // ✅ "none" for cross-site + secure
     path: "/",
-    maxAge: 60 * 60 , // 1 hour for access token
+    maxAge: 60 * 1000 ,
   } as const;
 
   // Access Token Cookie

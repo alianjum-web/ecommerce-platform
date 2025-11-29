@@ -1,4 +1,4 @@
-// src/store/useAuthStore.ts - UPDATED
+// src/store/useAuthStore.ts - FIXED VERSION
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -15,23 +15,19 @@ type AuthStore = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  register: (
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<string | null>;
+  register: (name: string, email: string, password: string) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
   fetchMe: () => Promise<User | null>;
   clearError: () => void;
   initialize: () => Promise<void>;
-  // REMOVED: triggerRedirect - not needed
+  setUser: (user: User | null) => void; // ✅ ADDED THIS METHOD
 };
 
 const getBaseURL = () => "/api/auth";
 
-// Create axios instance
+// Create axios instance FIRST
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
@@ -44,6 +40,9 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       isLoading: false,
       error: null,
+
+      // ✅ ADDED: setUser method
+      setUser: (user: User | null) => set({ user }),
 
       clearError: () => set({ error: null }),
 
@@ -94,7 +93,6 @@ export const useAuthStore = create<AuthStore>()(
             password,
           });
 
-          // Rest of your existing login logic...
           if (response.data.success && response.data.user) {
             console.log("✅ Login SUCCESS - User data:", response.data.user);
             set({
@@ -107,7 +105,6 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(response.data.error || "Login failed");
           }
         } catch (error: any) {
-          // Your existing error handling...
           console.error("❌ Login error:", error);
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
@@ -128,12 +125,37 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
+      // ✅ FIXED: refreshAccessToken method
       refreshAccessToken: async () => {
         try {
+          console.log("🔄 Attempting token refresh...");
+
           const res = await axiosInstance.post("/refresh-token");
-          return res.data.success;
-        } catch (e) {
-          console.error("❌ Token refresh failed:", e);
+
+          if (res.data.success) {
+            console.log("✅ Token refresh successful");
+
+            // ✅ FIX: Use the set method directly instead of setUser
+            if (res.data.user) {
+              set({ user: res.data.user });
+            }
+
+            return true;
+          } else {
+            console.warn("❌ Token refresh returned false");
+            // Clear invalid session
+            get().logout();
+            return false;
+          }
+        } catch (error: any) {
+          console.error("❌ Token refresh failed:", error);
+
+          // If it's a 401, clear the session
+          if (error.response?.status === 401) {
+            console.log("🔄 Refresh token invalid, clearing session");
+            get().logout();
+          }
+
           return false;
         }
       },
@@ -157,7 +179,6 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
       }),
-      // ✅ PRODUCTION FIX: Better persistence configuration
       onRehydrateStorage: () => (state) => {
         console.log("🔄 Storage rehydrated:", state?.user);
       },
@@ -165,22 +186,29 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// Response interceptor
+// ✅ FIXED: Response interceptor - define AFTER store creation
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
+    // Only retry for 401 errors and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      console.log("🔄 Interceptor: Token expired, attempting refresh...");
+      
       try {
-        const refreshSuccess = await useAuthStore
-          .getState()
-          .refreshAccessToken();
-        if (refreshSuccess) return axiosInstance(originalRequest);
-      } catch {
+        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        if (refreshSuccess) {
+          console.log("✅ Interceptor: Token refresh successful, retrying request");
+          return axiosInstance(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error("❌ Interceptor: Token refresh failed", refreshError);
         useAuthStore.getState().logout();
       }
     }
+    
     return Promise.reject(error);
   }
 );
