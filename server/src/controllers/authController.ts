@@ -8,7 +8,7 @@ import crypto from "crypto";
 
 function signAccessToken(userId: number, email: string, role: string) {
   return jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
-    expiresIn: "60m",
+    expiresIn: "3s",
   });
 }
 
