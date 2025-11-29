@@ -15,7 +15,11 @@ type AuthStore = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -49,14 +53,14 @@ export const useAuthStore = create<AuthStore>()(
       initialize: async () => {
         if (typeof window === "undefined") return;
         try {
-          console.log("🔧 Initializing auth state...");
+          // console.log("🔧 Initializing auth state...");
           const user = await get().fetchMe();
           if (user) {
-            console.log("🔧 User found on initialization:", user);
+            // console.log("🔧 User found on initialization:", user);
             set({ user });
           }
         } catch (error) {
-          console.log("🔧 No authenticated user found");
+          // console.log("🔧 No authenticated user found");
         }
       },
 
@@ -83,7 +87,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          console.log("🔄 Login process started");
+          // console.log("🔄 Login process started");
 
           // 🔥 CRITICAL: Ensure backend is warm before login
           await warmupService.ensureWarm();
@@ -94,7 +98,7 @@ export const useAuthStore = create<AuthStore>()(
           });
 
           if (response.data.success && response.data.user) {
-            console.log("✅ Login SUCCESS - User data:", response.data.user);
+            // console.log("✅ Login SUCCESS - User data:", response.data.user);
             set({
               isLoading: false,
               user: response.data.user,
@@ -105,7 +109,7 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error(response.data.error || "Login failed");
           }
         } catch (error: any) {
-          console.error("❌ Login error:", error);
+          // console.error("❌ Login error:", error);
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
             : "Login failed";
@@ -169,7 +173,7 @@ export const useAuthStore = create<AuthStore>()(
           }
           return null;
         } catch (error) {
-          console.error("Fetch me failed:", error);
+          // console.error("Fetch me failed:", error);
           return null;
         }
       },
@@ -180,7 +184,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
       }),
       onRehydrateStorage: () => (state) => {
-        console.log("🔄 Storage rehydrated:", state?.user);
+        // console.log("🔄 Storage rehydrated:", state?.user);
       },
     }
   )
@@ -191,24 +195,26 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // Only retry for 401 errors and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log("🔄 Interceptor: Token expired, attempting refresh...");
-      
+      // console.log("🔄 Interceptor: Token expired, attempting refresh...");
+
       try {
-        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        const refreshSuccess = await useAuthStore
+          .getState()
+          .refreshAccessToken();
         if (refreshSuccess) {
-          console.log("✅ Interceptor: Token refresh successful, retrying request");
+          // console.log("✅ Interceptor: Token refresh successful, retrying request");
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        console.error("❌ Interceptor: Token refresh failed", refreshError);
+        // console.error("❌ Interceptor: Token refresh failed", refreshError);
         useAuthStore.getState().logout();
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
