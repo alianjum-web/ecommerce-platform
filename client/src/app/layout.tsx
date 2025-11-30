@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import CommonLayout from "@/components/common/layout";
 import AuthProvider from "@/components/layout/AuthProvider";
 import { WarmupProvider } from "@/components/providers/warmUpProvider";
+import { CookieDebug } from "@/components/debug/CookieDebug";
 
 export const metadata: Metadata = {
   title: "Your E-Commerce App",
@@ -45,6 +46,7 @@ export default function RootLayout({
         <WarmupProvider>
           <AuthProvider>
             <CommonLayout>{children}</CommonLayout>
+            <CookieDebug />
           </AuthProvider>
         </WarmupProvider>
         <Toaster />
