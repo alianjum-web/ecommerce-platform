@@ -1,4 +1,4 @@
-// app/components/AuthProvider.tsx - OPTIMIZED
+// app/components/AuthProvider.tsx - OPTIMIZED (USE STORE)
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, refreshAccessToken } = useAuthStore();
+  const { user, refreshAccessToken, checkSession } = useAuthStore(); 
 
   useSilentAuth();
 
@@ -24,17 +24,17 @@ export default function AuthProvider({
         if (!user) {
           let hasRefreshToken = false;
           try {
-            const checkResponse = await fetch('/api/auth/check-session');
-            const sessionData = await checkResponse.json();
+            // ✅ USE STORE METHOD INSTEAD OF DIRECT API CALL
+            const sessionData = await checkSession();
             console.log("🔍 SERVER SESSION CHECK:", sessionData);
-            hasRefreshToken = sessionData.hasRefreshToken;
+            hasRefreshToken = sessionData?.hasRefreshToken || false;
           } catch (error) {
             console.error("Session check failed:", error);
           }
 
           if (hasRefreshToken) {
             console.log("🔄 Found refresh token, attempting refresh...");
-            await refreshAccessToken(); // Just await, don't need success check
+            await refreshAccessToken();
           } else {
             console.log("🔐 No refresh token found");
           }
@@ -49,9 +49,8 @@ export default function AuthProvider({
     };
 
     initializeAuth();
-  }, [user, refreshAccessToken]); // Only run when user state changes
+  }, [user, refreshAccessToken, checkSession]);
 
-  // ✅ BETTER LOADING STATE - Only show if it takes more than 500ms
   const [showLoader, setShowLoader] = useState(false);
   
   useEffect(() => {

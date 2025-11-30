@@ -25,7 +25,7 @@ type AuthStore = {
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
   fetchMe: () => Promise<User | null>;
-  checkSession: () => Promise<session | null>
+  checkSession: () => Promise<session | null>;
   clearError: () => void;
   initialize: () => Promise<void>;
   setUser: (user: User | null) => void; // ✅ ADDED THIS METHOD
@@ -131,7 +131,6 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // ✅ FIXED: refreshAccessToken method
       refreshAccessToken: async () => {
         try {
           console.log("🔄 Attempting token refresh...");
@@ -140,28 +139,21 @@ export const useAuthStore = create<AuthStore>()(
 
           if (res.data.success) {
             console.log("✅ Token refresh successful");
-
-            // ✅ FIX: Use the set method directly instead of setUser
             if (res.data.user) {
               set({ user: res.data.user });
             }
-
             return true;
-          } else {
-            console.warn("❌ Token refresh returned false");
-            // Clear invalid session
-            get().logout();
-            return false;
           }
+          return false;
         } catch (error: any) {
           console.error("❌ Token refresh failed:", error);
 
-          // If it's a 401, clear the session
+          // ✅ DON'T AUTO-LOGOUT ON NETWORK ERRORS
           if (error.response?.status === 401) {
             console.log("🔄 Refresh token invalid, clearing session");
             get().logout();
           }
-
+          // For network errors, keep the user logged in and retry later
           return false;
         }
       },
@@ -179,18 +171,18 @@ export const useAuthStore = create<AuthStore>()(
           return null;
         }
       },
-    
       checkSession: async () => {
         try {
           const res = await axiosInstance.get("/check-session");
-          if (res.data.user) {
-            console.log(res)
-            return res.data;
-          }
-          return null;
+          console.log("Session check result:", res.data);
+          return res.data; 
         } catch (error) {
-          // console.error("Fetch me failed:", error);
-          return null;
+          console.error("Session check failed:", error);
+          return {
+            hasRefreshToken: false,
+            hasAccessToken: false,
+            cookiesPresent: [],
+          };
         }
       },
     }),
