@@ -5,30 +5,13 @@ import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import useSilentAuth from "@/hooks/useSilentAuth";
 
-// ✅ BETTER COOKIE DETECTION FUNCTION
-function hasRefreshToken(): boolean {
-  if (typeof document === 'undefined') return false;
-  
-  const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split('=');
-    if (name && value) acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
-  
-  console.log("🍪 ALL COOKIES:", cookies);
-  console.log("🔍 Refresh token present:", !!cookies.refreshToken);
-  console.log("🔍 Access token present:", !!cookies.accessToken);
-  
-  return !!cookies.refreshToken;
-}
-
 export default function AuthProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, fetchMe, refreshAccessToken } = useAuthStore();
+  const { user, refreshAccessToken } = useAuthStore();
 
   useSilentAuth();
 
@@ -37,20 +20,26 @@ export default function AuthProvider({
       try {
         console.log("🔄 Initializing authentication...");
 
-        // ✅ USE IMPROVED COOKIE DETECTION
-        const hasRefreshTokenCookie = hasRefreshToken();
+        // ✅ CHECK COOKIES VIA SERVER API (CAN READ HttpOnly COOKIES)
+        let hasRefreshToken = false;
+        try {
+          const checkResponse = await fetch('/api/auth/check-session');
+          const sessionData = await checkResponse.json();
+          console.log("🔍 SERVER SESSION CHECK:", sessionData);
+          hasRefreshToken = sessionData.hasRefreshToken;
+        } catch (error) {
+          console.error("Session check failed:", error);
+        }
 
-        if (hasRefreshTokenCookie && !user) {
-          console.log("🔄 Found refresh token, attempting refresh...");
+        if (hasRefreshToken && !user) {
+          console.log("🔄 Found refresh token (server-side), attempting refresh...");
           const refreshSuccess = await refreshAccessToken();
           
           if (!refreshSuccess) {
-            console.log("❌ Token refresh failed, trying to fetch user directly...");
-            await fetchMe();
+            console.log("❌ Token refresh failed");
           }
-        } else if (!hasRefreshTokenCookie) {
-          console.log("🔐 No refresh token found in cookies");
-          console.log("📋 Available cookies:", document.cookie);
+        } else if (!hasRefreshToken) {
+          console.log("🔐 No refresh token found (server-side check)");
         } else {
           console.log("✅ User already authenticated");
         }
@@ -62,7 +51,7 @@ export default function AuthProvider({
     };
 
     initializeAuth();
-  }, [user, fetchMe, refreshAccessToken]);
+  }, [user, refreshAccessToken]);
 
   if (!isInitialized) {
     return (
