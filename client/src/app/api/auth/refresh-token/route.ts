@@ -1,4 +1,4 @@
-// app/api/auth/refresh-token/route.ts - PRODUCTION READY
+// app/api/auth/refresh-token/route.ts - ENHANCED DEBUGGING
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -12,7 +12,7 @@ const TIMEOUT_MS = 8000; // 8 seconds for token refresh
 
 export async function POST(req: NextRequest) {
   const BACKEND_URL =  process.env.BACKEND_URL || process.env.DEVE_URL;
-
+  
   if (!BACKEND_URL) {
     console.error("Configuration error: BACKEND_URL not set for refresh token");
     return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const cookieHeader = req.headers.get("cookie") || "";
-
+    
     // 🔍 DEBUG: Log what cookies we're receiving
     console.log("🍪 Received cookies:", {
       hasRefreshToken: cookieHeader.includes("refreshToken"),
@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
 
     // ✅ Using for...of for better performance
     const setCookieHeaders = backendRes.headers.getSetCookie();
+    console.log(`🍪 Backend Set-Cookie headers:`, setCookieHeaders);
+
     if (setCookieHeaders?.length > 0) {
       console.log(
         `🔄 Token refresh successful, forwarding ${setCookieHeaders.length} cookies`
@@ -113,7 +115,10 @@ export async function POST(req: NextRequest) {
 
       for (const cookie of setCookieHeaders) {
         response.headers.append("Set-Cookie", cookie);
+        console.log("   Appended:", cookie.substring(0, 80) + "...");
       }
+    } else {
+      console.log("🔍 No Set-Cookie headers from backend");
     }
 
     // Add security headers

@@ -1,9 +1,26 @@
-// app/components/AuthProvider.tsx
+// app/components/AuthProvider.tsx - FIXED VERSION
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import useSilentAuth from "@/hooks/useSilentAuth";
+
+// ✅ BETTER COOKIE DETECTION FUNCTION
+function hasRefreshToken(): boolean {
+  if (typeof document === 'undefined') return false;
+  
+  const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+    const [name, value] = cookie.trim().split('=');
+    if (name && value) acc[name] = value;
+    return acc;
+  }, {} as Record<string, string>);
+  
+  console.log("🍪 ALL COOKIES:", cookies);
+  console.log("🔍 Refresh token present:", !!cookies.refreshToken);
+  console.log("🔍 Access token present:", !!cookies.accessToken);
+  
+  return !!cookies.refreshToken;
+}
 
 export default function AuthProvider({
   children,
@@ -20,21 +37,22 @@ export default function AuthProvider({
       try {
         console.log("🔄 Initializing authentication...");
 
-        // First, try to refresh token if we have cookies but no user
-        const hasRefreshToken = document.cookie.includes("refreshToken");
+        // ✅ USE IMPROVED COOKIE DETECTION
+        const hasRefreshTokenCookie = hasRefreshToken();
 
-        if (hasRefreshToken && !user) {
+        if (hasRefreshTokenCookie && !user) {
           console.log("🔄 Found refresh token, attempting refresh...");
           const refreshSuccess = await refreshAccessToken();
-
+          
           if (!refreshSuccess) {
-            console.log(
-              "❌ Token refresh failed, trying to fetch user directly..."
-            );
+            console.log("❌ Token refresh failed, trying to fetch user directly...");
             await fetchMe();
           }
-        } else if (!user) {
-          console.log("🔐 No existing session, skipping auth initialization");
+        } else if (!hasRefreshTokenCookie) {
+          console.log("🔐 No refresh token found in cookies");
+          console.log("📋 Available cookies:", document.cookie);
+        } else {
+          console.log("✅ User already authenticated");
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -46,11 +64,11 @@ export default function AuthProvider({
     initializeAuth();
   }, [user, fetchMe, refreshAccessToken]);
 
-  // Optional: Show loading state while initializing
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <span className="ml-2">Checking authentication...</span>
       </div>
     );
   }
