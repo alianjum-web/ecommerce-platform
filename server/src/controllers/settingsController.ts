@@ -21,7 +21,7 @@ const addFeatureBanners = async (
 
     const uploadPromises = files.map((file) =>
       cloudinary.uploader.upload(file.path, {
-        folder: "ecommerce-feature-banners",
+        folder: "ecommerce-prisma/ecommerce-feature-banners",
       })
     );
 
