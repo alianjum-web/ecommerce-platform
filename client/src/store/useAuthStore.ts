@@ -3,6 +3,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { warmupService } from "@/utils/warmupService";
+import { session } from "@/types/session";
 
 type User = {
   id: string;
@@ -24,6 +25,7 @@ type AuthStore = {
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
   fetchMe: () => Promise<User | null>;
+  checkSession: () => Promise<session | null>
   clearError: () => void;
   initialize: () => Promise<void>;
   setUser: (user: User | null) => void; // ✅ ADDED THIS METHOD
@@ -170,6 +172,20 @@ export const useAuthStore = create<AuthStore>()(
           if (res.data.user) {
             set({ user: res.data.user, error: null });
             return res.data.user;
+          }
+          return null;
+        } catch (error) {
+          // console.error("Fetch me failed:", error);
+          return null;
+        }
+      },
+    
+      checkSession: async () => {
+        try {
+          const res = await axiosInstance.get("/check-session");
+          if (res.data.user) {
+            console.log(res)
+            return res.data;
           }
           return null;
         } catch (error) {
