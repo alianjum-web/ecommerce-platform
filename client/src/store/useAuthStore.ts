@@ -28,7 +28,7 @@ type AuthStore = {
   checkSession: () => Promise<session | null>;
   clearError: () => void;
   initialize: () => Promise<void>;
-  setUser: (user: User | null) => void; // ✅ ADDED THIS METHOD
+  setUser: (user: User | null) => void; 
 };
 
 const getBaseURL = () => "/api/auth";
@@ -47,8 +47,26 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       error: null,
 
-      // ✅ ADDED: setUser method
       setUser: (user: User | null) => set({ user }),
+      isAuthenticated: () => {
+        const state = get();
+        return !!state.user;
+      },
+
+      // Get user role safely
+      getUserRole: () => {
+        const state = get();
+        return state.user?.role || null;
+      },
+
+      // Reset auth state without making API calls
+      reset: () => {
+        set({
+          user: null,
+          isLoading: false,
+          error: null,
+        });
+      },
 
       clearError: () => set({ error: null }),
 

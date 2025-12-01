@@ -11,7 +11,7 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, initialize } = useAuthStore(); // ✅ Use initialize method from store
+  const { user, initialize } = useAuthStore(); 
 
   useSilentAuth();
 
@@ -22,7 +22,7 @@ export default function AuthProvider({
           console.log("🔄 AuthProvider: Initializing authentication...");
         }
         
-        await initialize(); // ✅ Let the store handle all initialization logic
+        await initialize(); 
         
       } catch (error) {
         console.error("AuthProvider: Initialization error:", error);
@@ -32,9 +32,8 @@ export default function AuthProvider({
     };
 
     initializeAuth();
-  }, [initialize]); // ✅ Only depend on initialize
+  }, [initialize]);
 
-  // ✅ Better loading state with delayed display
   const [showLoader, setShowLoader] = useState(false);
   
   useEffect(() => {
