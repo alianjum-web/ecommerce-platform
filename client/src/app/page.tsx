@@ -52,7 +52,7 @@ function HomePage() {
   console.log(banners, featuredProducts);
 
   return (
-    <div className="min-h-screen back">
+    <div className="min-h-screen bg">
       <section className="relative h-[600px] overflow-hidden">
         {banners.map((bannerItem, index) => (
           <div
@@ -107,7 +107,7 @@ function HomePage() {
       </section>
 
       {/* grid section */}
-      <section className="py-16">
+      <section className="py-16 ">
         <div className="container mx-auto px-4">
           <h2 className="text-center text-3xl font-semibold mb-2">
             THE WINTER EDIT
