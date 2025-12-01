@@ -1,4 +1,4 @@
-// app/components/AuthProvider.tsx - OPTIMIZED (USE STORE)
+// app/components/AuthProvider.tsx - PRODUCTION READY
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,46 +11,30 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, refreshAccessToken, checkSession } = useAuthStore(); 
+  const { user, initialize } = useAuthStore(); // ✅ Use initialize method from store
 
   useSilentAuth();
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log("🔄 Initializing authentication...");
-
-        // ✅ OPTIMIZED: Only check if we don't have a user
-        if (!user) {
-          let hasRefreshToken = false;
-          try {
-            // ✅ USE STORE METHOD INSTEAD OF DIRECT API CALL
-            const sessionData = await checkSession();
-            console.log("🔍 SERVER SESSION CHECK:", sessionData);
-            hasRefreshToken = sessionData?.hasRefreshToken || false;
-          } catch (error) {
-            console.error("Session check failed:", error);
-          }
-
-          if (hasRefreshToken) {
-            console.log("🔄 Found refresh token, attempting refresh...");
-            await refreshAccessToken();
-          } else {
-            console.log("🔐 No refresh token found");
-          }
-        } else {
-          console.log("✅ User already authenticated");
+        if (process.env.NODE_ENV === 'development') {
+          console.log("🔄 AuthProvider: Initializing authentication...");
         }
+        
+        await initialize(); // ✅ Let the store handle all initialization logic
+        
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        console.error("AuthProvider: Initialization error:", error);
       } finally {
         setIsInitialized(true);
       }
     };
 
     initializeAuth();
-  }, [user, refreshAccessToken, checkSession]);
+  }, [initialize]); // ✅ Only depend on initialize
 
+  // ✅ Better loading state with delayed display
   const [showLoader, setShowLoader] = useState(false);
   
   useEffect(() => {
@@ -58,7 +42,7 @@ export default function AuthProvider({
       if (!isInitialized) {
         setShowLoader(true);
       }
-    }, 500);
+    }, 300); // Show loader only after 300ms delay
 
     return () => clearTimeout(timer);
   }, [isInitialized]);
