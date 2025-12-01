@@ -54,15 +54,41 @@ export const useAuthStore = create<AuthStore>()(
 
       initialize: async () => {
         if (typeof window === "undefined") return;
+
         try {
-          // console.log("🔧 Initializing auth state...");
-          const user = await get().fetchMe();
-          if (user) {
-            // console.log("🔧 User found on initialization:", user);
-            set({ user });
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔧 AuthStore: Initializing auth state...");
+          }
+
+          // ✅ CHECK SESSION FIRST (more reliable than direct fetchMe)
+          const sessionData = await get().checkSession();
+
+          if (sessionData?.hasRefreshToken) {
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "🔄 AuthStore: Refresh token found, attempting refresh..."
+              );
+            }
+
+            // Try to refresh token to get fresh user data
+            const refreshSuccess = await get().refreshAccessToken();
+
+            if (!refreshSuccess && sessionData.hasAccessToken) {
+              // If refresh failed but we have access token, try direct fetch
+              if (process.env.NODE_ENV === "development") {
+                console.log(
+                  "🔧 AuthStore: Token refresh failed, trying direct fetch..."
+                );
+              }
+              await get().fetchMe();
+            }
+          } else {
+            if (process.env.NODE_ENV === "development") {
+              console.log("🔐 AuthStore: No valid session found");
+            }
           }
         } catch (error) {
-          // console.log("🔧 No authenticated user found");
+          console.error("AuthStore: Initialization error:", error);
         }
       },
 
@@ -89,7 +115,9 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          // console.log("🔄 Login process started");
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔄 AuthStore: Login process started for:", email);
+          }
 
           // 🔥 CRITICAL: Ensure backend is warm before login
           await warmupService.ensureWarm();
@@ -100,7 +128,10 @@ export const useAuthStore = create<AuthStore>()(
           });
 
           if (response.data.success && response.data.user) {
-            // console.log("✅ Login SUCCESS - User data:", response.data.user);
+            if (process.env.NODE_ENV === "development") {
+              console.log("✅ AuthStore: Login SUCCESS for:", email);
+            }
+
             set({
               isLoading: false,
               user: response.data.user,
@@ -108,14 +139,27 @@ export const useAuthStore = create<AuthStore>()(
             });
             return true;
           } else {
-            throw new Error(response.data.error || "Login failed");
+            // Handle cases where backend returns success: false
+            const errorMessage = response.data.error || "Login failed";
+            throw new Error(errorMessage);
           }
         } catch (error: any) {
-          // console.error("❌ Login error:", error);
+          // ✅ IMPROVED ERROR EXTRACTION
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message || "Login failed"
-            : "Login failed";
-          set({ isLoading: false, error: errorMessage });
+            : error.message || "Login failed";
+
+          console.error(
+            "❌ AuthStore: Login failed for",
+            email,
+            ":",
+            errorMessage
+          );
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
           return false;
         }
       },
@@ -133,27 +177,46 @@ export const useAuthStore = create<AuthStore>()(
 
       refreshAccessToken: async () => {
         try {
-          console.log("🔄 Attempting token refresh...");
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔄 AuthStore: Attempting token refresh...");
+          }
 
           const res = await axiosInstance.post("/refresh-token");
 
           if (res.data.success) {
-            console.log("✅ Token refresh successful");
+            if (process.env.NODE_ENV === "development") {
+              console.log("✅ AuthStore: Token refresh successful");
+            }
+
             if (res.data.user) {
-              set({ user: res.data.user });
+              set({ user: res.data.user, error: null });
             }
             return true;
           }
+
+          // If backend says refresh failed but returned success: false
+          if (process.env.NODE_ENV === "development") {
+            console.warn("❌ AuthStore: Token refresh returned false");
+          }
           return false;
         } catch (error: any) {
-          console.error("❌ Token refresh failed:", error);
+          console.error("❌ AuthStore: Token refresh failed:", error);
 
-          // ✅ DON'T AUTO-LOGOUT ON NETWORK ERRORS
+          // ✅ IMPROVED ERROR HANDLING
           if (error.response?.status === 401) {
-            console.log("🔄 Refresh token invalid, clearing session");
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "🔄 AuthStore: Refresh token invalid, clearing session"
+              );
+            }
             get().logout();
+          } else if (error.code === "NETWORK_ERROR" || !error.response) {
+            // Network errors - don't logout, just return false
+            if (process.env.NODE_ENV === "development") {
+              console.log("🌐 AuthStore: Network error during token refresh");
+            }
           }
-          // For network errors, keep the user logged in and retry later
+
           return false;
         }
       },
@@ -161,27 +224,62 @@ export const useAuthStore = create<AuthStore>()(
       fetchMe: async () => {
         try {
           const res = await axiosInstance.get("/me");
+
           if (res.data.user) {
             set({ user: res.data.user, error: null });
             return res.data.user;
           }
+
+          // If no user in response but request succeeded
+          if (process.env.NODE_ENV === "development") {
+            console.warn("🔍 AuthStore: fetchMe succeeded but no user data");
+          }
           return null;
-        } catch (error) {
-          // console.error("Fetch me failed:", error);
+        } catch (error: any) {
+          // ✅ BETTER ERROR CATEGORIZATION
+          if (error.response?.status === 401) {
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "🔐 AuthStore: fetchMe - Unauthorized (likely expired token)"
+              );
+            }
+          } else if (error.response?.status === 404) {
+            if (process.env.NODE_ENV === "development") {
+              console.log("🔍 AuthStore: fetchMe - User not found");
+            }
+          } else {
+            console.error("AuthStore: fetchMe failed:", error);
+          }
+
           return null;
         }
       },
       checkSession: async () => {
         try {
           const res = await axiosInstance.get("/check-session");
-          console.log("Session check result:", res.data);
-          return res.data; 
-        } catch (error) {
-          console.error("Session check failed:", error);
+
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔍 AuthStore: Session check result:", res.data);
+          }
+
+          // ✅ ENSURE CONSISTENT RESPONSE FORMAT
           return {
+            success: res.data.success ?? true,
+            hasRefreshToken: res.data.hasRefreshToken ?? false,
+            hasAccessToken: res.data.hasAccessToken ?? false,
+            cookiesPresent: res.data.cookiesPresent ?? [],
+            ...res.data,
+          };
+        } catch (error) {
+          console.error("AuthStore: Session check failed:", error);
+
+          // ✅ RETURN CONSISTENT ERROR FORMAT
+          return {
+            success: false,
             hasRefreshToken: false,
             hasAccessToken: false,
             cookiesPresent: [],
+            error: "Session check failed",
           };
         }
       },
@@ -198,29 +296,59 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// ✅ FIXED: Response interceptor - define AFTER store creation
+// ✅ IMPROVED: Response interceptor with production logging
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Optional: Log successful auth API calls in development
+    if (
+      process.env.NODE_ENV === "development" &&
+      response.config.url?.includes("/auth/")
+    ) {
+      console.log(
+        `✅ API ${response.config.method?.toUpperCase()} ${
+          response.config.url
+        }: ${response.status}`
+      );
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     // Only retry for 401 errors and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      // console.log("🔄 Interceptor: Token expired, attempting refresh...");
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔄 Interceptor: Token expired, attempting refresh...");
+      }
 
       try {
         const refreshSuccess = await useAuthStore
           .getState()
           .refreshAccessToken();
+
         if (refreshSuccess) {
-          // console.log("✅ Interceptor: Token refresh successful, retrying request");
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              "✅ Interceptor: Token refresh successful, retrying request"
+            );
+          }
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        // console.error("❌ Interceptor: Token refresh failed", refreshError);
+        console.error("❌ Interceptor: Token refresh failed", refreshError);
         useAuthStore.getState().logout();
       }
+    }
+
+    // Log other errors
+    if (error.response?.status >= 500) {
+      console.error(
+        "🚨 Server error:",
+        error.response.status,
+        error.config.url
+      );
     }
 
     return Promise.reject(error);
