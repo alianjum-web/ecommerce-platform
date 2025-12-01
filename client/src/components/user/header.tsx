@@ -112,6 +112,7 @@ function Header() {
                 <User className="mr-1 h-4 w-4" />
                 Account
               </Button>
+              <ThemeToggle />
               <Button
                 onClick={() => {
                   setShowSheetDialog(false);

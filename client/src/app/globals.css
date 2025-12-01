@@ -1,20 +1,224 @@
-/* src/app/globals.css - START WITH THIS SIMPLE VERSION */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+  /* Base radius */
+  --radius: 1rem;
+  
+  /* Light Theme - Futuristic Clean */
+  --background: 240 10% 4%;           /* Deep space black */
+  --foreground: 210 20% 98%;          /* Clean white with blue tint */
+  
+  --card: 240 10% 6%;                 /* Slightly lighter black */
+  --card-foreground: 210 20% 98%;
+  
+  /* Primary - Futuristic Blue/Purple */
+  --primary: 255 85% 65%;             /* Electric blue-purple */
+  --primary-foreground: 0 0% 100%;
+  --primary-light: 255 100% 75%;      /* Brighter for hover */
+  --primary-dark: 255 70% 55%;        /* Darker for active */
+  --primary-glow: 255 100% 75% / 0.3; /* Glow effect */
+  
+  /* Secondary - Neon Cyan */
+  --secondary: 180 100% 50%;          /* Neon cyan */
+  --secondary-foreground: 240 10% 4%;
+  --secondary-light: 180 100% 65%;
+  --secondary-dark: 180 100% 35%;
+  
+  /* Accent - Electric Pink */
+  --accent: 330 100% 65%;             /* Electric pink */
+  --accent-foreground: 0 0% 100%;
+  --accent-subtle: 330 100% 65% / 0.2;
+  
+  /* Utility */
+  --muted: 240 5% 15%;
+  --muted-foreground: 240 5% 65%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --success: 142 76% 45%;
+  --warning: 38 92% 55%;
+  
+  --border: 240 5% 20% / 0.5;
+  --input: 240 5% 20% / 0.3;
+  --ring: 255 85% 65%;
+  
+  /* Futuristic Effects */
+  --glass: 240 10% 10% / 0.2;
+  --glass-border: 255 85% 65% / 0.2;
+  --glow: 255 100% 75% / 0.1;
+  --hologram: 180 100% 50% / 0.1;
 }
 
 [data-theme="dark"] {
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
+  /* Dark Theme - Deep Futuristic */
+  --background: 240 15% 3%;           /* Deeper space black */
+  --foreground: 210 20% 96%;
+  
+  --card: 240 15% 5%;
+  --card-foreground: 210 20% 96%;
+  
+  /* Primary - Deeper Blue */
+  --primary: 255 75% 60%;
+  --primary-foreground: 0 0% 100%;
+  --primary-light: 255 85% 70%;
+  --primary-dark: 255 65% 50%;
+  --primary-glow: 255 85% 70% / 0.4;
+  
+  /* Secondary - Teal */
+  --secondary: 170 100% 45%;
+  --secondary-foreground: 240 15% 3%;
+  --secondary-light: 170 100% 55%;
+  --secondary-dark: 170 100% 35%;
+  
+  /* Accent - Magenta */
+  --accent: 320 100% 60%;
+  --accent-foreground: 0 0% 100%;
+  --accent-subtle: 320 100% 60% / 0.25;
+  
+  /* Utility */
+  --muted: 240 10% 12%;
+  --muted-foreground: 240 5% 60%;
+  
+  --destructive: 0 74% 55%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --success: 142 71% 40%;
+  --warning: 38 87% 50%;
+  
+  --border: 240 10% 15% / 0.6;
+  --input: 240 10% 15% / 0.4;
+  --ring: 255 75% 60%;
+  
+  /* Futuristic Effects */
+  --glass: 240 15% 8% / 0.3;
+  --glass-border: 255 75% 60% / 0.25;
+  --glow: 255 85% 70% / 0.15;
+  --hologram: 170 100% 45% / 0.15;
+}
+
+[data-theme="light"] {
+  /* Light Theme - Futuristic Bright */
+  --background: 0 0% 99%;             /* Almost white */
+  --foreground: 240 10% 4%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 4%;
+  
+  /* Primary - Bright Blue */
+  --primary: 230 100% 60%;
+  --primary-foreground: 0 0% 100%;
+  --primary-light: 230 100% 70%;
+  --primary-dark: 230 100% 50%;
+  --primary-glow: 230 100% 70% / 0.3;
+  
+  /* Secondary - Bright Cyan */
+  --secondary: 190 100% 50%;
+  --secondary-foreground: 240 10% 4%;
+  --secondary-light: 190 100% 65%;
+  --secondary-dark: 190 100% 35%;
+  
+  /* Accent - Bright Pink */
+  --accent: 340 100% 65%;
+  --accent-foreground: 0 0% 100%;
+  --accent-subtle: 340 100% 65% / 0.15;
+  
+  /* Utility */
+  --muted: 240 5% 95%;
+  --muted-foreground: 240 4% 46%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --success: 142 76% 45%;
+  --warning: 38 92% 55%;
+  
+  --border: 240 5% 90% / 0.8;
+  --input: 240 5% 90% / 0.6;
+  --ring: 230 100% 60%;
+  
+  /* Futuristic Effects */
+  --glass: 0 0% 100% / 0.6;
+  --glass-border: 230 100% 60% / 0.2;
+  --glow: 230 100% 70% / 0.1;
+  --hologram: 190 100% 50% / 0.1;
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
+  }
+}
+
+@layer utilities {
+  /* Glass morphism effect */
+  .glass-effect {
+    @apply backdrop-blur-glass border-glass-border bg-glass;
+    box-shadow: 
+      0 8px 32px var(--glow),
+      inset 0 1px 0 var(--glass-border);
+  }
+  
+  /* Hologram effect */
+  .hologram-effect {
+    background: linear-gradient(
+      135deg,
+      transparent,
+      var(--hologram),
+      transparent
+    );
+    @apply animate-hologram-shimmer;
+    background-size: 200% 200%;
+  }
+  
+  /* Glow text */
+  .text-glow {
+    text-shadow: 0 0 20px var(--primary-glow);
+  }
+  
+  /* Neon border */
+  .neon-border {
+    box-shadow: 
+      0 0 10px var(--primary),
+      inset 0 0 10px var(--primary-glow);
+  }
+  
+  /* Futuristic gradient */
+  .futuristic-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary)),
+      hsl(var(--accent))
+    );
+  }
+  
+  /* Smooth transitions */
+  .theme-transition {
+    @apply transition-all duration-300 ease-in-out;
   }
 }

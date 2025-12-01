@@ -52,7 +52,7 @@ function HomePage() {
   console.log(banners, featuredProducts);
 
   return (
-    <div className="min-h-screen bg">
+    <div className="min-h-screen bg-background">
       <section className="relative h-[600px] overflow-hidden">
         {banners.map((bannerItem, index) => (
           <div
