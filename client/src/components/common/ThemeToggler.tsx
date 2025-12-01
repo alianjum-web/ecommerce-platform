@@ -1,14 +1,15 @@
+// components/ThemeToggle.tsx - CORRECTED
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sun, Moon, Zap, Sparkles, Monitor } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sun, Moon, Sparkles, Monitor } from "lucide-react";
 
 // Modular Components
 const ThemeIcon = ({ theme }: { theme: 'light' | 'dark' | 'system' }) => {
   const icons = {
-    light: <Sun className="w-4 h-4" />,
-    dark: <Moon className="w-4 h-4" />,
-    system: <Monitor className="w-4 h-4" />,
+    light: <Sun className="w-4 h-4 text-primary" />,
+    dark: <Moon className="w-4 h-4 text-secondary" />,
+    system: <Monitor className="w-4 h-4 text-accent" />,
   };
   
   return (
@@ -22,28 +23,18 @@ const ThemeIcon = ({ theme }: { theme: 'light' | 'dark' | 'system' }) => {
   );
 };
 
-const ThemeIndicator = ({ theme }: { theme: 'light' | 'dark' | 'system' }) => (
-  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-    <div className={`w-1 h-1 rounded-full ${
-      theme === 'light' ? 'bg-primary animate-pulse' : 
-      theme === 'dark' ? 'bg-secondary animate-pulse' : 'bg-accent animate-pulse'
-    }`} />
-  </div>
-);
-
 const ThemeGlowEffect = ({ isHovered, theme }: { isHovered: boolean; theme: 'light' | 'dark' | 'system' }) => {
   if (!isHovered) return null;
   
   const gradientColors = {
-    light: 'from-primary via-secondary to-accent',
-    dark: 'from-secondary via-primary to-accent',
-    system: 'from-accent via-primary to-secondary',
+    light: 'from-primary/20 via-secondary/10 to-accent/10',
+    dark: 'from-secondary/20 via-primary/10 to-accent/10',
+    system: 'from-accent/20 via-primary/10 to-secondary/10',
   };
   
   return (
-    <div className="absolute inset-0 rounded-full">
-      <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${gradientColors[theme]} opacity-20 blur-md animate-pulse`} />
-      <div className="absolute inset-0 rounded-full border border-glass-border animate-ping opacity-30" />
+    <div className="absolute inset-0 rounded-full overflow-hidden">
+      <div className={`absolute inset-0 bg-gradient-to-r ${gradientColors[theme]} animate-pulse`} />
     </div>
   );
 };
@@ -55,31 +46,11 @@ export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Initialize theme from localStorage or system preference
+  // Sync with current theme
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' || 'system';
     setTheme(savedTheme);
     setMounted(true);
-    
-    const applyTheme = (themeToApply: 'light' | 'dark') => {
-      document.documentElement.setAttribute('data-theme', themeToApply);
-    };
-
-    if (savedTheme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      applyTheme(systemTheme);
-      
-      // Listen for system theme changes
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        applyTheme(e.matches ? 'dark' : 'light');
-      };
-      
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    } else {
-      applyTheme(savedTheme);
-    }
   }, []);
 
   const toggleTheme = () => {
@@ -91,23 +62,24 @@ export default function ThemeToggle() {
     const currentIndex = themes.indexOf(theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
     
-    // Add a subtle animation effect
-    document.documentElement.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+    // Smooth transition
+    document.documentElement.style.transition = 'background-color 0.3s ease, color 0.3s ease';
     
     setTimeout(() => {
       setTheme(nextTheme);
       localStorage.setItem('theme', nextTheme);
       
+      // Apply theme based on selection
       if (nextTheme === 'system') {
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', systemTheme);
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', systemPrefersDark ? 'dark' : 'light');
       } else {
         document.documentElement.setAttribute('data-theme', nextTheme);
       }
       
       setIsAnimating(false);
       document.documentElement.style.transition = '';
-    }, 150);
+    }, 200);
   };
 
   const getThemeLabel = () => {
@@ -115,9 +87,9 @@ export default function ThemeToggle() {
       case 'light': return 'Light Mode';
       case 'dark': return 'Dark Mode';
       case 'system': return 'Auto Mode';
+      default: return 'Theme';
     }
   };
-
 
   if (!mounted) {
     return (
@@ -128,9 +100,10 @@ export default function ThemeToggle() {
   return (
     <div className="relative">
       {/* Tooltip */}
-      <div className={`absolute -top-14 left-1/2 transform -translate-x-1/2 px-3 py-2 rounded-lg glass-effect border-glass-border transition-all duration-300 ${
-        isHovered ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-2'
+      <div className={`absolute -top-12 left-1/2 transform -translate-x-1/2 px-3 py-2 rounded-lg glass-effect border-glass-border transition-all duration-300 z-50 ${
+        isHovered ? 'opacity-100 visible' : 'opacity-0 invisible'
       }`}>
+        <p className="text-xs font-medium whitespace-nowrap">{getThemeLabel()}</p>
         <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-glass border-l-glass-border border-t-glass-border rotate-45" />
       </div>
 
@@ -139,20 +112,14 @@ export default function ThemeToggle() {
         onClick={toggleTheme}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`relative w-12 h-12 rounded-full glass-effect border-glass-border hover:neon-border transition-all duration-300 ${
+        className={`relative w-12 h-12 rounded-full glass-effect border-glass-border hover:border-primary/50 transition-all duration-300 ${
           isAnimating ? 'scale-95 rotate-90' : 'hover:scale-110'
         } group`}
-        aria-label={`Switch theme (Current: ${getThemeLabel()})`}
+        aria-label={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'} mode`}
         disabled={isAnimating}
       >
         {/* Background Effects */}
         <ThemeGlowEffect isHovered={isHovered} theme={theme} />
-        
-        {/* Pulse ring */}
-        <div className={`absolute -inset-2 rounded-full border ${
-          theme === 'light' ? 'border-primary/30' : 
-          theme === 'dark' ? 'border-secondary/30' : 'border-accent/30'
-        } animate-ping opacity-0 group-hover:opacity-100 transition-opacity`} />
         
         {/* Icon Container */}
         <div className="relative z-10 flex items-center justify-center">
@@ -167,24 +134,28 @@ export default function ThemeToggle() {
         </div>
         
         {/* Active indicator */}
-        <ThemeIndicator theme={theme} />
-        
-        {/* Hover effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-glass/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+          <div className={`w-1.5 h-1.5 rounded-full ${
+            theme === 'light' ? 'bg-primary animate-pulse' : 
+            theme === 'dark' ? 'bg-secondary animate-pulse' : 'bg-accent animate-pulse'
+          }`} />
+        </div>
       </button>
 
       {/* Theme Cycle Indicator */}
-      <div className="flex justify-center mt-2">
-        <div className="flex items-center gap-1">
+      <div className="flex justify-center mt-3">
+        <div className="flex items-center gap-1.5">
           {(['light', 'dark', 'system'] as const).map((t) => (
             <div
               key={t}
               className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
                 theme === t 
-                  ? t === 'light' ? 'bg-primary' : 
-                    t === 'dark' ? 'bg-secondary' : 'bg-accent'
+                  ? t === 'light' ? 'bg-primary ring-1 ring-primary/30' : 
+                    t === 'dark' ? 'bg-secondary ring-1 ring-secondary/30' : 
+                    'bg-accent ring-1 ring-accent/30'
                   : 'bg-muted'
-              } ${theme === t ? 'w-4' : ''}`}
+              } ${theme === t ? 'w-4 scale-125' : ''}`}
+              title={t === 'light' ? 'Light' : t === 'dark' ? 'Dark' : 'Auto'}
             />
           ))}
         </div>

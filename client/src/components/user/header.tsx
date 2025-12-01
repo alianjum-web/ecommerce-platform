@@ -247,7 +247,8 @@ import {
 } from "../ui/sheet";
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/store/useCartStore";
-import ThemeToggle from "../layout/Themetoggle";
+// import ThemeToggle from "../layout/Themetoggle";
+import ThemeToggle from "../common/ThemeToggler";
 import { Input } from "../ui/input";
 
 const mainNavItems = [
