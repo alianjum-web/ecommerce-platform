@@ -10,7 +10,6 @@ export default function useSilentAuth() {
   const isRefreshingRef = useRef<boolean>(false);
   const retryCountRef = useRef<number>(0);
 
-  // ✅ FIXED: Use token expiry info or fallback to 12 minutes (80% of 15)
   const calculateRefreshTime = useCallback(async (): Promise<number | null> => {
     try {
       // First, check if we have stored token expiry info

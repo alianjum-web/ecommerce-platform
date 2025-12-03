@@ -1,7 +1,7 @@
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
-import { OrderStore } from "@/types/orderTypes";
+import { OrderStore } from "@/types/order/orderTypes";
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   currentOrder: null,
