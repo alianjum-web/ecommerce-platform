@@ -127,3 +127,200 @@ Browser → backend(localhost:4001/login) → backend sets cookies for localhost
 
 ### Production proxy call
 Browser(yourapp.com) → yourapp.com/api/auth/login → Next.js proxy → forwards to backend-service.com/login → backend sets backend-service.com cookies → proxy rewrites cookies → browser stores yourapp.com cookies
+
+# DREAM FEATURES: 
+Logged In:
+
+Profile picture & name
+
+Account dashboard
+
+Order history
+
+Wishlist
+
+Recently viewed
+
+Compare list
+
+Address book
+
+Payment methods
+
+Reviews
+
+Returns & refunds
+
+Logout
+
+Logged Out:
+
+Sign In → /auth/login
+
+Register → /auth/register
+
+Guest checkout option
+
+Track order without login
+
+6. WISHLIST CLICK:
+text
+Click Heart Icon → Wishlist page
+List of saved items
+
+Price drop alerts
+
+Back-in-stock notifications
+
+Move to cart option
+
+Create multiple wishlists
+
+Share wishlist feature
+
+7. NEW ARRIVALS:
+text
+Click New Arrivals → `/new-arrivals`
+- Filter by date (Last 7/30/90 days)
+- "Just Added" badge
+- Pre-order options
+- Launch calendar
+- Coming soon preview
+
+#### **8. DEALS/SPECIAL OFFERS:**
+Click Deals → /deals
+
+text
+**Types:**
+- Flash Sales (countdown timer)
+- Daily Deals
+- Clearance
+- Bundle offers
+- Member-only deals
+- Seasonal sales
+- BOGO offers
+
+#### **9. TRACK ORDER:**
+Click Track Order → /track-order
+
+Input order number & email
+
+Real-time tracking map
+
+Delivery updates
+
+Delivery person contact
+
+Reschedule option
+
+Delivery instructions
+
+10. COMPARE PRODUCTS:
+text
+Add items to compare → Click Compare → `/compare`
+- Side-by-side comparison
+- Feature comparison table
+- Price comparison
+- Rating comparison
+- Pros/cons list
+- "Best for" recommendations
+
+#### **11. STORE LOCATOR:**
+Click Store Locator → /stores
+
+Interactive map
+
+Search by location
+
+Store hours
+
+In-store inventory
+
+Pickup options
+
+Store events
+
+12. NOTIFICATIONS:
+text
+Click Bell Icon → Notifications panel
+Types:
+
+Order updates
+
+Price drop alerts
+
+Back in stock
+
+New arrivals matching interests
+
+Promotions
+
+Abandoned cart reminders
+
+Birthday offers
+
+13. QUICK ACTIONS:
+Reorder: Quick repeat last order
+
+Quick Buy: Buy now without cart
+
+Schedule Purchase: Set delivery date
+
+Gift Wrap: Add gift options
+
+Subscribe: Regular delivery
+
+Share: Share product/page
+
+Additional Features for Premium E-commerce:
+Personalized Recommendations
+
+Quick View (modal popup on product hover)
+
+Recently Viewed carousel
+
+Browsing History
+
+Multi-currency support
+
+Size/Color swatches in menu
+
+Inventory status (Low stock alerts)
+
+Estimated delivery date calculator
+
+Installment calculator
+
+Gift card balance display
+
+Loyalty points counter
+
+Live chat integration
+
+AR/3D View indicator
+
+Sustainability badges
+
+Product video thumbnails
+
+Mobile-Specific Behavior:
+Bottom Navigation Bar (optional for quick access)
+
+Swipe gestures to open cart/wishlist
+
+Pull to refresh on category pages
+
+Haptic feedback on interactions
+
+Voice search integration
+
+Barcode scanner in search
+
+Location-based store detection
+
+App-like PWA features
+
+Offline mode support
+
+Push notifications opt-in
+
