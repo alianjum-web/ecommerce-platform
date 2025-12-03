@@ -1,16 +1,8 @@
+import { Coupon } from "@/types/checkout/Coupon";
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 
-export interface Coupon {
-  id: string;
-  code: string;
-  discountPercent: number;
-  startDate: string;
-  endDate: string;
-  usageLimit: number;
-  usageCount: number;
-}
 
 interface CouponStore {
   couponList: Coupon[];
