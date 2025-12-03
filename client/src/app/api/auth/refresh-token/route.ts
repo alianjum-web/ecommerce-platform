@@ -11,8 +11,8 @@ const ERROR_MESSAGES = {
 const TIMEOUT_MS = 8000; // 8 seconds for token refresh
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL =  process.env.BACKEND_URL || process.env.DEVE_URL;
-  
+  const BACKEND_URL = process.env.BACKEND_URL || process.env.DEVE_URL;
+
   if (!BACKEND_URL) {
     console.error("Configuration error: BACKEND_URL not set for refresh token");
     return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const cookieHeader = req.headers.get("cookie") || "";
-    
+
     // 🔍 DEBUG: Log what cookies we're receiving
     console.log("🍪 Received cookies:", {
       hasRefreshToken: cookieHeader.includes("refreshToken"),
@@ -99,33 +99,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const responseData = await backendRes.json();
-    const response = NextResponse.json(responseData, {
-      status: backendRes.status,
-    });
+    if (backendRes.ok) {
+      const responseData = await backendRes.json();
 
-    // ✅ Using for...of for better performance
-    const setCookieHeaders = backendRes.headers.getSetCookie();
-    console.log(`🍪 Backend Set-Cookie headers:`, setCookieHeaders);
+      // ✅ ENSURE tokenInfo always exists with correct values
+      const enhancedData = {
+        ...responseData,
+        tokenInfo: {
+          // Use backend tokenInfo if available, otherwise use defaults
+          accessTokenExpiresIn:
+            responseData.tokenInfo?.accessTokenExpiresIn ?? 15 * 60,
+          refreshTokenExpiresIn:
+            responseData.tokenInfo?.refreshTokenExpiresIn ?? 7 * 24 * 60 * 60,
+          refreshedAt:
+            responseData.tokenInfo?.refreshedAt ?? new Date().toISOString(),
+          suggestedRefreshTime:
+            responseData.tokenInfo?.suggestedRefreshTime ?? 12 * 60,
+          // Add proxy metadata for debugging
+          proxied: true,
+          proxyTimestamp: new Date().toISOString(),
+        },
+      };
 
-    if (setCookieHeaders?.length > 0) {
-      console.log(
-        `🔄 Token refresh successful, forwarding ${setCookieHeaders.length} cookies`
-      );
+      const response = NextResponse.json(enhancedData, {
+        status: backendRes.status,
+      });
 
-      for (const cookie of setCookieHeaders) {
-        response.headers.append("Set-Cookie", cookie);
-        console.log("   Appended:", cookie.substring(0, 80) + "...");
+      // ✅ Using for...of for better performance
+      const setCookieHeaders = backendRes.headers.getSetCookie();
+      console.log(`🍪 Backend Set-Cookie headers:`, setCookieHeaders);
+
+      if (setCookieHeaders?.length > 0) {
+        console.log(
+          `🔄 Token refresh successful, forwarding ${setCookieHeaders.length} cookies`
+        );
+
+        for (const cookie of setCookieHeaders) {
+          response.headers.append("Set-Cookie", cookie);
+          console.log("   Appended:", cookie.substring(0, 80) + "...");
+        }
+      } else {
+        console.log("🔍 No Set-Cookie headers from backend");
       }
-    } else {
-      console.log("🔍 No Set-Cookie headers from backend");
+
+      // Add security headers
+      response.headers.set("X-Content-Type-Options", "nosniff");
+      response.headers.set("X-Frame-Options", "DENY");
+      return response;
     }
-
-    // Add security headers
-    response.headers.set("X-Content-Type-Options", "nosniff");
-    response.headers.set("X-Frame-Options", "DENY");
-
-    return response;
   } catch (error: any) {
     console.error("Refresh token proxy error:", error);
 
