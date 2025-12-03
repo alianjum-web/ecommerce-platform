@@ -8,7 +8,7 @@ import crypto from "crypto";
 
 function signAccessToken(userId: number, email: string, role: string) {
   return jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
-    expiresIn: "60s",
+    expiresIn: "15m",
   });
 }
 
@@ -17,40 +17,34 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-async function setTokens(
-  res: Response,
-  accessToken: string,
-  refreshToken: string
-) {
+async function setTokens(res: Response, accessToken: string, refreshToken: string) {
   const isProd = process.env.NODE_ENV === "production";
+  const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // ✅ 15 minutes (matches JWT)
+  const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-  // ✅ Industry Standard: No domain for cross-origin, let browser handle it
   const cookieOptions = {
-    httpOnly: true, // ✅ Prevent XSS
-    secure: isProd, // ✅ HTTPS only in production
-    sameSite: isProd ? "none" : "lax", // ✅ "none" for cross-site + secure
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     path: "/",
-    maxAge: 60 * 60 * 1000 , // ms value
   } as const;
 
-  // Access Token Cookie
-  res.cookie("accessToken", accessToken, cookieOptions);
-
-  // Refresh Token Cookie (longer expiry)
-  res.cookie("refreshToken", refreshToken, {
+  // Access Token Cookie (15 minutes)
+  res.cookie("accessToken", accessToken, {
     ...cookieOptions,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: ACCESS_TOKEN_MAX_AGE,
   });
 
-  // ✅ Logging for development only
-  if (!isProd) {
-    console.log("🍪 Cookies set with options:", {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      domain: "Not set (auto)",
-    });
-  }
+  // Refresh Token Cookie (7 days)
+  res.cookie("refreshToken", refreshToken, {
+    ...cookieOptions,
+    maxAge: REFRESH_TOKEN_MAX_AGE,
+  });
+
+  return {
+    accessTokenExpiresIn: 15 * 60, // 15 minutes in seconds
+    refreshTokenExpiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
+  };
 }
 
 const register = async (req: Request, res: Response): Promise<void> => {
@@ -234,7 +228,6 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
     });
 
     if (!user) {
-      // Clear invalid cookies
       res.clearCookie('accessToken');
       res.clearCookie('refreshToken');
       res.status(401).json({ success: false, error: "Invalid refresh token" });
@@ -243,17 +236,18 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
 
     // Issue new access token
     const newAccessToken = signAccessToken(user.id, user.email, user.role);
+    const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes
     
-    // Set new access token cookie
     const isProd = process.env.NODE_ENV === "production";
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 60 * 60 * 1000, // 1 hour
+      maxAge: ACCESS_TOKEN_MAX_AGE,
     });
 
+    // ✅ CRITICAL: Return consistent tokenInfo
     res.json({
       success: true,
       message: "Token refreshed",
@@ -262,6 +256,12 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
         name: user.name,
         email: user.email,
         role: user.role,
+      },
+      tokenInfo: {
+        accessTokenExpiresIn: 15 * 60, // 15 minutes in seconds
+        refreshTokenExpiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
+        refreshedAt: new Date().toISOString(),
+        suggestedRefreshTime: 12 * 60, // Refresh at 12 minutes (80% of 15)
       }
     });
 
@@ -270,6 +270,7 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ success: false, error: "Token refresh failed" });
   }
 };
+
 
 const logout = async (req: Request, res: Response): Promise<void> => {
   const isProd = process.env.NODE_ENV === "production";

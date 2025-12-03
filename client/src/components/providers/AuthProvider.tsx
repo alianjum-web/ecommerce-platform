@@ -1,4 +1,4 @@
-// app/components/AuthProvider.tsx - PRODUCTION READY
+// app/components/AuthProvider.tsx - ENHANCED
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,48 +11,59 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, initialize } = useAuthStore(); 
-
+  const [initError, setInitError] = useState<string | null>(null);
+  const { initialize } = useAuthStore(); 
+  
   useSilentAuth();
 
   useEffect(() => {
+    let mounted = true;
+    let initTimeout: NodeJS.Timeout;
+
     const initializeAuth = async () => {
       try {
         if (process.env.NODE_ENV === 'development') {
-          console.log("🔄 AuthProvider: Initializing authentication...");
+          console.log("🔄 AuthProvider: Initializing...");
         }
         
-        await initialize(); 
+        await initialize();
         
-      } catch (error) {
+        if (mounted) {
+          setIsInitialized(true);
+          setInitError(null);
+        }
+      } catch (error: any) {
         console.error("AuthProvider: Initialization error:", error);
-      } finally {
-        setIsInitialized(true);
+        if (mounted) {
+          setIsInitialized(true); // Still show app
+          setInitError(error.message || "Auth initialization failed");
+        }
       }
     };
 
-    initializeAuth();
+    initTimeout = setTimeout(() => {
+      initializeAuth();
+    }, 100);
+
+    return () => {
+      mounted = false;
+      clearTimeout(initTimeout);
+    };
   }, [initialize]);
 
-  const [showLoader, setShowLoader] = useState(false);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isInitialized) {
-        setShowLoader(true);
-      }
-    }, 300); // Show loader only after 300ms delay
-
-    return () => clearTimeout(timer);
-  }, [isInitialized]);
-
-  if (!isInitialized && showLoader) {
+  if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <span className="ml-2">Loading...</span>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Loading authentication...</p>
+        </div>
       </div>
     );
+  }
+
+  if (initError && process.env.NODE_ENV === 'development') {
+    console.warn("AuthProvider initialization warning:", initError);
   }
 
   return <>{children}</>;
