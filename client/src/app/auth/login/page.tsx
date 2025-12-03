@@ -42,7 +42,7 @@ const WarmupStatus = ({ isWarming }: { isWarming: boolean }) => (
           <Rocket className="w-4 h-4 text-white animate-float" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold text-foreground text-glow">🚀 Initializing Systems</p>
+          <p className="font-semibold text-foreground">🚀 Initializing Systems</p>
           <p className="text-sm text-muted-foreground">Optimizing your experience...</p>
         </div>
         <div className="flex gap-1">
