@@ -1,0 +1,165 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Heart, Minus, Plus, Trash2 } from "lucide-react";
+import type { CartItemProps } from "@/types/cart/CartItemProps";
+
+export function CartItem({ item, onUpdateQuantity, onRemove, isUpdating }: CartItemProps) {
+  return (
+    <Card className="glass-effect border border-glass-border hover:border-primary/30 transition-all duration-300">
+      <CardContent className="p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Product Image */}
+          <div className="relative">
+            <div className="w-24 h-24 rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10">
+              <img
+                src={item.image}
+                alt={item.name}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            {item.quantity > 1 && (
+              <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground">
+                x{item.quantity}
+              </Badge>
+            )}
+          </div>
+
+          {/* Product Info */}
+          <div className="flex-1">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="space-y-2">
+                <h3 className="font-bold text-foreground text-lg line-clamp-1">
+                  {item.name}
+                </h3>
+                
+                <div className="flex items-center gap-4 text-sm">
+                  {item.color && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 rounded-full border border-border" 
+                           style={{ backgroundColor: item.color.toLowerCase() }} />
+                      <span className="text-muted-foreground">{item.color}</span>
+                    </div>
+                  )}
+                  
+                  {item.size && (
+                    <Badge variant="outline" className="border-border">
+                      Size: {item.size}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Price Display */}
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-primary">
+                    ${item.price.toFixed(2)}
+                  </span>
+                  {item.originalPrice && item.originalPrice > item.price && (
+                    <>
+                      <span className="text-lg text-muted-foreground line-through">
+                        ${item.originalPrice.toFixed(2)}
+                      </span>
+                      <Badge className="bg-accent/20 text-accent border-accent/20">
+                        Save ${(item.originalPrice - item.price).toFixed(2)}
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Quantity Controls */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    disabled={isUpdating || item.quantity <= 1}
+                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-full border-border hover:border-primary"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      className="w-16 text-center bg-input border-border"
+                      value={item.quantity}
+                      onChange={(e) => 
+                        onUpdateQuantity(item.id, Math.max(1, parseInt(e.target.value) || 1))
+                      }
+                      min="1"
+                      max="99"
+                    />
+                    <div className="absolute inset-y-0 right-2 flex items-center">
+                      <span className="text-xs text-muted-foreground">qty</span>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    disabled={isUpdating}
+                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-full border-border hover:border-primary"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          disabled={isUpdating}
+                          onClick={() => onRemove(item.id)}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Remove from cart</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                        >
+                          <Heart className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Save for later</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+            </div>
+
+            {/* Item Total */}
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
+              <span className="text-sm text-muted-foreground">Item Total</span>
+              <span className="text-xl font-bold text-primary">
+                ${(item.price * item.quantity).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
