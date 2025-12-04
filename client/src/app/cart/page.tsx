@@ -9,19 +9,14 @@ import {
   Minus, 
   Plus, 
   Trash2, 
-  ShoppingBag, 
   ShoppingCart, 
-  ArrowRight, 
   Sparkles, 
-  Zap, 
   Package,
   Truck,
   Shield,
   Gift,
-  CreditCard,
   RefreshCw,
   Heart,
-  TrendingUp,
   AlertCircle,
   CheckCircle
 } from "lucide-react";
@@ -29,13 +24,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { CartItem } from "@/components/user/cart/CartItem";
 import { CartSummary } from "@/components/user/cart/CartSummary";
 import { CartLoadingSkeleton } from "@/components/user/cart/CartLoadingSkeleton";
