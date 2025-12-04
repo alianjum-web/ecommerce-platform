@@ -17,17 +17,18 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+const isProd = process.env.NODE_ENV === "production";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? "none" : "lax",
+  path: "/",
+} as const;
+
 async function setTokens(res: Response, accessToken: string, refreshToken: string) {
-  const isProd = process.env.NODE_ENV === "production";
   const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // ✅ 15 minutes (matches JWT)
   const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
-    path: "/",
-  } as const;
 
   // Access Token Cookie (15 minutes)
   res.cookie("accessToken", accessToken, {
@@ -236,18 +237,16 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
 
     // Issue new access token
     const newAccessToken = signAccessToken(user.id, user.email, user.role);
-    const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes
+    const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes in milliseconds
     
-    const isProd = process.env.NODE_ENV === "production";
     res.cookie("accessToken", newAccessToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/",
+      ...cookieOptions,
       maxAge: ACCESS_TOKEN_MAX_AGE,
     });
 
-    // ✅ CRITICAL: Return consistent tokenInfo
+    const now = Date.now();
+    
+    // ✅ CRITICAL: Return ALL values in milliseconds
     res.json({
       success: true,
       message: "Token refreshed",
@@ -258,10 +257,12 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
         role: user.role,
       },
       tokenInfo: {
-        accessTokenExpiresIn: 15 * 60, // 15 minutes in seconds
-        refreshTokenExpiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
-        refreshedAt: new Date().toISOString(),
-        suggestedRefreshTime: 12 * 60, // Refresh at 12 minutes (80% of 15)
+        accessTokenExpiresIn: 15 * 60 * 1000, // 15 minutes in milliseconds
+        refreshTokenExpiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        refreshedAt: now, // milliseconds timestamp (NOT ISO string)
+        suggestedRefreshTime: 12 * 60 * 1000, // 12 minutes in milliseconds (80% of 15)
+        // Alternative: Return absolute timestamp instead
+        // suggestedRefreshTime: now + (12 * 60 * 1000), // Absolute time
       }
     });
 
