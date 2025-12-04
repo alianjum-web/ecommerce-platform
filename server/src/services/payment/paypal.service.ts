@@ -14,9 +14,6 @@ import {
 import axios, { AxiosResponse, AxiosError } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { getErrorMessage } from "../../utils/catchError";
-import { relative, resolve } from "path";
-import { success } from "zod";
-import { error } from "console";
 
 export class PayPalService implements PaymentMethod {
   private clientId: string;

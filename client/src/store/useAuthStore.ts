@@ -389,25 +389,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ refreshPromise });
         return refreshPromise;
       },
-
-      fetchMe: async () => {
-        try {
-          const res = await axiosInstance.get("/me");
-
-          if (res.data.user) {
-            set({ user: res.data.user, error: null });
-            return res.data.user;
-          }
-          return null;
-        } catch (error: any) {
-          if (error.response?.status === 401) {
-            // Token might be expired, but don't logout - let interceptor handle it
-          }
-          console.error("AuthStore: fetchMe failed:", error);
-          return null;
-        }
-      },
-
+      
       checkSession: async (): Promise<Session> => {
         try {
           const res = await axiosInstance.get("/check-session");
@@ -434,6 +416,25 @@ export const useAuthStore = create<AuthStore>()(
           };
         }
       },
+
+      fetchMe: async () => {
+        try {
+          const res = await axiosInstance.get("/me");
+
+          if (res.data.user) {
+            set({ user: res.data.user, error: null });
+            return res.data.user;
+          }
+          return null;
+        } catch (error: any) {
+          if (error.response?.status === 401) {
+            // Token might be expired, but don't logout - let interceptor handle it
+          }
+          console.error("AuthStore: fetchMe failed:", error);
+          return null;
+        }
+      },
+
     }),
     {
       name: "auth-storage",
