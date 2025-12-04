@@ -237,6 +237,7 @@ export class PayPalService implements PaymentMethod {
 
       return {
         success: true,
+        paymentId: response.data.id, // Add this line
         orderId: response.data.id,
         data: response.data,
       };
@@ -331,7 +332,6 @@ export class PayPalService implements PaymentMethod {
       return false;
     }
   }
-  
 
   validatePayment(data: unknown): boolean {
     if (typeof data !== "object" || data === null) {
