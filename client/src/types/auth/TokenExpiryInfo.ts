@@ -1,5 +1,5 @@
 export interface TokenExpiryInfo {
-  lastRefresh: number;
-  expiresIn: number; // milliseconds
-  nextRefresh: number;
+  refreshedAt: number; 
+  accessTokenExpiresIn: number; 
+  suggestedRefreshTime: number;
 }
