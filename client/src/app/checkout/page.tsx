@@ -1,23 +1,3 @@
-// "use client";
-
-// import { PayPalScriptProvider } from "@paypal/react-paypal-js";
-// import CheckoutSuspense from "./checkoutSkeleton";
-
-// function CheckoutPage() {
-//   const options = {
-//     clientId:
-//       "AYYtmQuBVHm_q4fO-nRv84xIKhQk1-BdhSLckYRxcBJLhxI5EcxafPKdkvKpqLDP-pNLNXalxvlUSgZE",
-//   };
-
-//   return (
-//     <PayPalScriptProvider options={options}>
-//       <CheckoutSuspense />
-//     </PayPalScriptProvider>
-//   );
-// }
-
-// export default CheckoutPage;
-
 "use client";
 
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -36,9 +16,6 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
-// ==================== MODULAR COMPONENTS ====================
-
-// 1. Futuristic Loading Component
 function FuturisticCheckoutLoader() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-card/50 to-background">
