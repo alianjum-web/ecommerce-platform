@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { warmupService } from "@/utils/warmupService";
 import type { User } from "@/types/auth/User";
-import type { TokenExpiryInfo } from "@/types/auth/TokenExpiryInfo";
+import type { TokenExpiryInfoBackendRes } from "@/types/auth/TokenExpiryInfoFromBackend";
 import type { Session } from "@/types/auth/Session";
 import { authLogger } from "@/utils/Logger";
 import exp from "constants";
@@ -13,7 +13,7 @@ interface AuthStore {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  tokenExpiry: TokenExpiryInfo | null;
+  tokenExpiry: TokenExpiryInfoBackendRes | null;
   isRefreshing: boolean;
   refreshPromise: Promise<boolean> | null;
   // Actions
@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearError: () => set({ error: null }),
-      
+
       // Auth operations
       initialize: async () => {
         if (typeof window === "undefined") return;
@@ -92,17 +92,17 @@ export const useAuthStore = create<AuthStore>()(
           if (process.env.NODE_ENV === "development") {
             console.log("🔧 AuthStore: Initializing auth state...");
           }
-          
+
           const sessionData = await get().checkSession();
-          
+
           if (sessionData.hasRefreshToken) {
             if (process.env.NODE_ENV === "development") {
               console.log("🔄 AuthStore: Refresh token found");
             }
-            
+
             // Check if token needs refresh
             const expiryInfo = get().getTokenExpiryInfo();
-            
+
             if (expiryInfo?.shouldRefresh) {
               await get().refreshAccessToken();
             } else if (sessionData.hasAccessToken) {
@@ -152,9 +152,9 @@ export const useAuthStore = create<AuthStore>()(
           if (process.env.NODE_ENV === "development") {
             console.log("🔄 AuthStore: Login process started for:", email);
           }
-          
+
           await warmupService.ensureWarm();
-          
+
           const response = await axiosInstance.post("/login", {
             email,
             password,
@@ -186,7 +186,7 @@ export const useAuthStore = create<AuthStore>()(
           return false;
         }
       },
-      
+
       logout: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -202,10 +202,25 @@ export const useAuthStore = create<AuthStore>()(
         if (!tokenInfo?.accessTokenExpiresIn) return;
 
         const now = Date.now();
-        const tokenExpiry: TokenExpiryInfo = {
+
+        // Ensure values are in milliseconds
+        const accessTokenExpiresInMs =
+          typeof tokenInfo.accessTokenExpiresIn === "number"
+            ? tokenInfo.accessTokenExpiresIn <= 1000
+              ? tokenInfo.accessTokenExpiresIn * 1000
+              : tokenInfo.accessTokenExpiresIn
+            : 15 * 60 * 1000; // Default 15 minutes
+
+        const suggestedRefreshTimeMs = tokenInfo.suggestedRefreshTime
+          ? tokenInfo.suggestedRefreshTime <= 1000
+            ? tokenInfo.suggestedRefreshTime * 1000
+            : tokenInfo.suggestedRefreshTime
+          : accessTokenExpiresInMs * 0.8; // Default 80%
+
+        const tokenExpiry: TokenExpiryInfoBackendRes = {
           refreshedAt: now,
-          accessTokenExpiresIn: tokenInfo.accessTokenExpiresIn * 1000,
-          suggestedRefreshTime: now + tokenInfo.accessTokenExpiresIn * 1000 * 0.8,
+          accessTokenExpiresIn: accessTokenExpiresInMs, // duration in ms
+          suggestedRefreshTime: now + suggestedRefreshTimeMs, // absolute timestamp
         };
 
         set({ tokenExpiry });
@@ -223,7 +238,8 @@ export const useAuthStore = create<AuthStore>()(
         if (tokenExpiry) {
           const now = Date.now();
           return {
-            isValid: now < tokenExpiry.refreshedAt + tokenExpiry.accessTokenExpiresIn,
+            isValid:
+              now < tokenExpiry.refreshedAt + tokenExpiry.accessTokenExpiresIn,
             timeUntilExpiry: Math.max(
               0,
               tokenExpiry.refreshedAt + tokenExpiry.accessTokenExpiresIn - now
@@ -271,34 +287,38 @@ export const useAuthStore = create<AuthStore>()(
           const startTime = performance.now();
           try {
             authLogger.http("POST", "/api/auth/refresh-token", undefined, {
-              hasCookies:
-                typeof document !== "undefined" &&
-                document.cookie.includes("refreshToken"),
+              note: "cannot detect httpOnly cookies from client; check server logs or /check-session",
             });
 
             const res = await axiosInstance.post("/refresh-token");
             const duration = performance.now() - startTime;
 
             if (res.data.success && res.data.tokenInfo) {
-              // ✅ FIXED: Use suggestedRefreshTime from API instead of hardcoded 80%
+              const serverRefreshedAt = res.data.tokenInfo.refreshedAt
+                ? Date.parse(res.data.tokenInfo.refreshedAt)
+                : Date.now();
+
+              // ✅ CORRECT: Convert ALL server seconds to milliseconds
               const accessTokenExpiresInMs =
                 res.data.tokenInfo.accessTokenExpiresIn * 1000;
               const suggestedRefreshTimeMs =
-                (res.data.tokenInfo.suggestedRefreshTime || 720) * 1000;
+                res.data.tokenInfo.suggestedRefreshTime * 1000;
 
-              const expiryData: TokenExpiryInfo = {
-                refreshedAt: Date.now(),
-                accessTokenExpiresIn: accessTokenExpiresInMs,
-                suggestedRefreshTime: Date.now() + suggestedRefreshTimeMs,
+              const expiryData: TokenExpiryInfoBackendRes = {
+                refreshedAt: serverRefreshedAt,
+                accessTokenExpiresIn: accessTokenExpiresInMs, // duration in ms
+                suggestedRefreshTime:
+                  serverRefreshedAt + suggestedRefreshTimeMs, // absolute timestamp
               };
 
               authLogger.auth("Token refresh successful", {
                 duration: `${duration.toFixed(2)}ms`,
-                accessTokenExpiresIn: `${res.data.tokenInfo.accessTokenExpiresIn}s`,
-                suggestedRefreshTime: `${res.data.tokenInfo.suggestedRefreshTime}s`,
-                nextRefresh: new Date(expiryData.suggestedRefreshTime).toISOString(),
+                accessTokenExpiresIn: `${accessTokenExpiresInMs}ms`,
+                suggestedRefreshTime: new Date(
+                  expiryData.suggestedRefreshTime
+                ).toISOString(),
                 expiresAt: new Date(
-                  Date.now() + expiryData.accessTokenExpiresIn
+                  serverRefreshedAt + accessTokenExpiresInMs
                 ).toISOString(),
               });
 
@@ -332,7 +352,7 @@ export const useAuthStore = create<AuthStore>()(
           } catch (error: any) {
             const duration = performance.now() - startTime;
 
-            if (error?.isAxiosError?.()) {
+            if (axios.isAxiosError(error)) {
               const errorMessage =
                 error.response?.data?.error || "Token refresh failed";
               const statusCode = error.response?.status;
@@ -438,9 +458,6 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// Axios interceptor remains the same...
-
-// ✅ IMPROVED: Response interceptor with production logging
 axiosInstance.interceptors.response.use(
   (response) => {
     // Optional: Log successful auth API calls in development
