@@ -6,14 +6,16 @@ import { warmupService } from "@/utils/warmupService";
 import type { User } from "@/types/auth/User";
 import type { TokenExpiryInfo } from "@/types/auth/TokenExpiryInfo";
 import type { Session } from "@/types/auth/Session";
+import { authLogger } from "@/utils/Logger";
+import exp from "constants";
 
 interface AuthStore {
-  // State
   user: User | null;
   isLoading: boolean;
   error: string | null;
   tokenExpiry: TokenExpiryInfo | null;
-  
+  isRefreshing: boolean;
+  refreshPromise: Promise<boolean> | null;
   // Actions
   setUser: (user: User | null) => void;
   isAuthenticated: () => boolean;
@@ -21,7 +23,11 @@ interface AuthStore {
   reset: () => void;
   clearError: () => void;
   initialize: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
@@ -44,10 +50,6 @@ const axiosInstance = axios.create({
   timeout: 15000,
 });
 
-// Track refresh attempts to prevent loops
-let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
-
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -56,10 +58,12 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       error: null,
       tokenExpiry: null,
+      isRefreshing: false,
+      refreshPromise: null,
 
       // Basic state actions
       setUser: (user: User | null) => set({ user }),
-      
+
       isAuthenticated: () => {
         return !!get().user;
       },
@@ -79,61 +83,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearError: () => set({ error: null }),
-
-      // Token expiry management
-      updateTokenExpiry: (tokenInfo: any) => {
-        if (!tokenInfo?.accessTokenExpiresIn) return;
-        
-        const now = Date.now();
-        const tokenExpiry: TokenExpiryInfo = {
-          lastRefresh: now,
-          expiresIn: tokenInfo.accessTokenExpiresIn * 1000,
-          nextRefresh: now + (tokenInfo.accessTokenExpiresIn * 1000 * 0.8),
-        };
-        
-        set({ tokenExpiry });
-        localStorage.setItem('token_expiry', JSON.stringify(tokenExpiry));
-      },
-
-      clearTokenExpiry: () => {
-        set({ tokenExpiry: null });
-        localStorage.removeItem('token_expiry');
-      },
-
-      getTokenExpiryInfo: () => {
-        const { tokenExpiry } = get();
-        
-        if (tokenExpiry) {
-          const now = Date.now();
-          return {
-            isValid: now < tokenExpiry.lastRefresh + tokenExpiry.expiresIn,
-            timeUntilExpiry: Math.max(
-              0,
-              tokenExpiry.lastRefresh + tokenExpiry.expiresIn - now
-            ),
-            shouldRefresh: now > tokenExpiry.nextRefresh,
-          };
-        }
-        
-        // Fallback to localStorage
-        try {
-          const stored = localStorage.getItem('token_expiry');
-          if (!stored) return null;
-          
-          const expiry = JSON.parse(stored);
-          set({ tokenExpiry: expiry });
-          
-          const now = Date.now();
-          return {
-            isValid: now < expiry.lastRefresh + expiry.expiresIn,
-            timeUntilExpiry: Math.max(0, expiry.lastRefresh + expiry.expiresIn - now),
-            shouldRefresh: now > expiry.nextRefresh,
-          };
-        } catch {
-          return null;
-        }
-      },
-
+      
       // Auth operations
       initialize: async () => {
         if (typeof window === "undefined") return;
@@ -142,14 +92,14 @@ export const useAuthStore = create<AuthStore>()(
           if (process.env.NODE_ENV === "development") {
             console.log("🔧 AuthStore: Initializing auth state...");
           }
-
+          
           const sessionData = await get().checkSession();
-
+          
           if (sessionData.hasRefreshToken) {
             if (process.env.NODE_ENV === "development") {
               console.log("🔄 AuthStore: Refresh token found");
             }
-
+            
             // Check if token needs refresh
             const expiryInfo = get().getTokenExpiryInfo();
             
@@ -179,11 +129,11 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
-          
+
           if (response.data.tokenInfo) {
             get().updateTokenExpiry(response.data.tokenInfo);
           }
-          
+
           set({ isLoading: false });
           return response.data.userId;
         } catch (error: any) {
@@ -202,9 +152,9 @@ export const useAuthStore = create<AuthStore>()(
           if (process.env.NODE_ENV === "development") {
             console.log("🔄 AuthStore: Login process started for:", email);
           }
-
+          
           await warmupService.ensureWarm();
-
+          
           const response = await axiosInstance.post("/login", {
             email,
             password,
@@ -214,7 +164,7 @@ export const useAuthStore = create<AuthStore>()(
             if (response.data.tokenInfo) {
               get().updateTokenExpiry(response.data.tokenInfo);
             }
-            
+
             set({
               isLoading: false,
               user: response.data.user,
@@ -236,7 +186,7 @@ export const useAuthStore = create<AuthStore>()(
           return false;
         }
       },
-
+      
       logout: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -248,62 +198,175 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      refreshAccessToken: async () => {
-        // Prevent multiple simultaneous refresh calls
-        if (isRefreshing && refreshPromise) {
-          return refreshPromise;
+      updateTokenExpiry: (tokenInfo: any) => {
+        if (!tokenInfo?.accessTokenExpiresIn) return;
+
+        const now = Date.now();
+        const tokenExpiry: TokenExpiryInfo = {
+          refreshedAt: now,
+          accessTokenExpiresIn: tokenInfo.accessTokenExpiresIn * 1000,
+          suggestedRefreshTime: now + tokenInfo.accessTokenExpiresIn * 1000 * 0.8,
+        };
+
+        set({ tokenExpiry });
+        localStorage.setItem("token_expiry", JSON.stringify(tokenExpiry));
+      },
+
+      clearTokenExpiry: () => {
+        set({ tokenExpiry: null });
+        localStorage.removeItem("token_expiry");
+      },
+
+      getTokenExpiryInfo: () => {
+        const { tokenExpiry } = get();
+
+        if (tokenExpiry) {
+          const now = Date.now();
+          return {
+            isValid: now < tokenExpiry.refreshedAt + tokenExpiry.accessTokenExpiresIn,
+            timeUntilExpiry: Math.max(
+              0,
+              tokenExpiry.refreshedAt + tokenExpiry.accessTokenExpiresIn - now
+            ),
+            shouldRefresh: now > tokenExpiry.suggestedRefreshTime,
+          };
         }
 
-        isRefreshing = true;
-        refreshPromise = (async () => {
+        // Fallback to localStorage
+        try {
+          const stored = localStorage.getItem("token_expiry");
+          if (!stored) return null;
+
+          const expiry = JSON.parse(stored);
+          set({ tokenExpiry: expiry });
+
+          const now = Date.now();
+          return {
+            isValid: now < expiry.refreshedAt + expiry.accessTokenExpiresIn,
+            timeUntilExpiry: Math.max(
+              0,
+              expiry.refreshedAt + expiry.accessTokenExpiresIn - now
+            ),
+            shouldRefresh: now > expiry.suggestedRefreshTime,
+          };
+        } catch {
+          return null;
+        }
+      },
+
+      refreshAccessToken: async () => {
+        const state = get();
+
+        if (state.isRefreshing && state.refreshPromise) {
+          authLogger.debug(
+            "Refresh already in progress, returning existing promise"
+          );
+          return state.refreshPromise;
+        }
+
+        set({ isRefreshing: true });
+        authLogger.info("Starting token refresh process");
+
+        const refreshPromise = (async () => {
+          const startTime = performance.now();
           try {
-            if (process.env.NODE_ENV === "development") {
-              console.log("🔄 AuthStore: Refreshing access token...");
-            }
+            authLogger.http("POST", "/api/auth/refresh-token", undefined, {
+              hasCookies:
+                typeof document !== "undefined" &&
+                document.cookie.includes("refreshToken"),
+            });
 
             const res = await axiosInstance.post("/refresh-token");
+            const duration = performance.now() - startTime;
 
             if (res.data.success && res.data.tokenInfo) {
+              // ✅ FIXED: Use suggestedRefreshTime from API instead of hardcoded 80%
+              const accessTokenExpiresInMs =
+                res.data.tokenInfo.accessTokenExpiresIn * 1000;
+              const suggestedRefreshTimeMs =
+                (res.data.tokenInfo.suggestedRefreshTime || 720) * 1000;
+
               const expiryData: TokenExpiryInfo = {
-                lastRefresh: Date.now(),
-                expiresIn: res.data.tokenInfo.accessTokenExpiresIn * 1000,
-                nextRefresh: Date.now() + (res.data.tokenInfo.accessTokenExpiresIn * 1000 * 0.8),
+                refreshedAt: Date.now(),
+                accessTokenExpiresIn: accessTokenExpiresInMs,
+                suggestedRefreshTime: Date.now() + suggestedRefreshTimeMs,
               };
-              
+
+              authLogger.auth("Token refresh successful", {
+                duration: `${duration.toFixed(2)}ms`,
+                accessTokenExpiresIn: `${res.data.tokenInfo.accessTokenExpiresIn}s`,
+                suggestedRefreshTime: `${res.data.tokenInfo.suggestedRefreshTime}s`,
+                nextRefresh: new Date(expiryData.suggestedRefreshTime).toISOString(),
+                expiresAt: new Date(
+                  Date.now() + expiryData.accessTokenExpiresIn
+                ).toISOString(),
+              });
+
+              // Store in localStorage for persistence
               localStorage.setItem("token_expiry", JSON.stringify(expiryData));
-              set({ tokenExpiry: expiryData, error: null });
+              set({
+                tokenExpiry: expiryData,
+                error: null,
+                isRefreshing: false,
+                refreshPromise: null,
+              });
 
               if (res.data.user) {
                 set({ user: res.data.user });
+                authLogger.debug("User data updated from refresh");
               }
-              
-              if (process.env.NODE_ENV === "development") {
-                console.log("✅ AuthStore: Token refresh successful");
-              }
+
               return true;
+            } else {
+              authLogger.warn(
+                "Token refresh API returned success=false",
+                res.data
+              );
+              set({
+                error: res.data.error || "Refresh failed",
+                isRefreshing: false,
+                refreshPromise: null,
+              });
+              return false;
             }
-            
-            return false;
           } catch (error: any) {
-            const errorMessage = axios.isAxiosError(error)
-              ? error.response?.data?.error || "Token refresh failed"
-              : "Token refresh failed";
-            
-            console.error("❌ AuthStore: Token refresh failed:", errorMessage);
-            
-            get().clearTokenExpiry();
-            set({ error: errorMessage });
-            
-            if (error.response?.status === 401) {
-              setTimeout(() => get().logout(), 100);
+            const duration = performance.now() - startTime;
+
+            if (error?.isAxiosError?.()) {
+              const errorMessage =
+                error.response?.data?.error || "Token refresh failed";
+              const statusCode = error.response?.status;
+
+              authLogger.error("Token refresh HTTP error", error, {
+                statusCode,
+                errorMessage,
+                duration: `${duration.toFixed(2)}ms`,
+                url: error.config?.url,
+              });
+
+              set({ error: errorMessage });
+
+              if (statusCode === 401) {
+                authLogger.auth("Refresh token invalid, logging out");
+                setTimeout(() => get().logout(), 100);
+              }
+            } else {
+              authLogger.error("Token refresh network/unknown error", error, {
+                duration: `${duration.toFixed(2)}ms`,
+              });
+              set({ error: "Network error during refresh" });
             }
+
+            get().clearTokenExpiry();
+            set({
+              isRefreshing: false,
+              refreshPromise: null,
+            });
             return false;
-          } finally {
-            isRefreshing = false;
-            refreshPromise = null;
           }
         })();
 
+        set({ refreshPromise });
         return refreshPromise;
       },
 
@@ -361,7 +424,7 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           // Sync localStorage with Zustand state on rehydration
-          const stored = localStorage.getItem('token_expiry');
+          const stored = localStorage.getItem("token_expiry");
           if (stored) {
             try {
               state.tokenExpiry = JSON.parse(stored);
