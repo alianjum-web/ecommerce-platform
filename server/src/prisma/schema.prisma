@@ -84,7 +84,7 @@ model Coupon {
   startDate       DateTime
   endDate         DateTime
   usageLimit      Int
-  usageCount      Int
+  usageCount      Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   isActive        Boolean  @default(true)
@@ -92,6 +92,9 @@ model Coupon {
   minOrderValue   Float?
   userIds         String[]
   orders          Order[]
+
+  @@index([code])
+  @@index([isActive])
 }
 
 model Address {
@@ -110,29 +113,40 @@ model Address {
   orders     Order[]
 
   @@index([userId])
+  @@index([isDefault])
 }
 
+// UPDATED Order model with payment flow support
 model Order {
-  id            String        @id @default(cuid())
-  userId        Int
-  addressId     String
-  couponId      String?
-  total         Float
-  status        OrderStatus   @default(PENDING)
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(PENDING)
-  paymentId     String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  address       Address       @relation(fields: [addressId], references: [id], onDelete: Cascade)
-  coupon        Coupon?       @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items         OrderItem[]
+  id                String        @id @default(cuid())
+  userId            Int
+  addressId         String
+  couponId          String?
+  total             Float
+  currency          String        @default("USD")
+  status            OrderStatus   @default(PENDING)
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentId         String?       // Internal payment reference
+  providerOrderId   String?       // PayPal/Stripe order ID
+  providerCaptureId String?       // Actual capture/charge ID from provider
+  capturedAt        DateTime?     // When payment was captured
+  notes             String?       // For admin notes, cancellation reasons, etc.
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  address           Address       @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  coupon            Coupon?       @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items             OrderItem[]
 
   @@index([userId])
   @@index([addressId])
   @@index([couponId])
   @@index([paymentId])
+  @@index([providerOrderId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -148,7 +162,7 @@ model OrderItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull) // ✅ Add this relation
+  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
@@ -160,11 +174,16 @@ enum Role {
 }
 
 enum OrderStatus {
-  PENDING
-  PROCESSING
-  CANCELLED
-  SHIPPED
-  DELIVERED
+  PENDING            // Alias for DRAFT (for backward compatibility)
+  DRAFT              // Order created but payment not initiated
+  PENDING_PAYMENT    // Payment initiated, waiting for user approval
+  PAYMENT_APPROVED   // User approved payment, ready for capture
+  PROCESSING         // Payment captured, order being processed
+  SHIPPED            // Order shipped to customer
+  DELIVERED          // Order delivered
+  CANCELLED          // Order cancelled (before shipping)
+  PAYMENT_FAILED     // Payment failed
+  CAPTURE_FAILED     // Payment capture failed
 }
 
 enum PaymentMethod {
@@ -173,8 +192,12 @@ enum PaymentMethod {
   STRIPE
 }
 
+// UPDATED PaymentStatus enum
 enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
+  PENDING     // Payment initiated but not completed
+  APPROVED    // User approved payment (PayPal specific)
+  COMPLETED   // Payment successfully captured
+  FAILED      // Payment failed
+  REFUNDED    // Payment refunded
+  CANCELLED   // Payment cancelled by user
 }
