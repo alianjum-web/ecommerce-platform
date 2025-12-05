@@ -117,6 +117,7 @@ model UserCoupon {
   @@index([userId])
   @@index([couponId])
 }
+
 model Address {
   id         String   @id @default(uuid())
   userId     String

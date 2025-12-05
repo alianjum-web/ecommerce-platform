@@ -3,7 +3,6 @@ import { authenticateJwt, isSuperAdmin } from "../middleware/authMiddleware";
 import {
   createPaymentOrder,
   capturePayment,
-  createFinalOrderInDB,
   getAllOrdersForAdmin,
   getOrder,
   getOrdersByUserId,
@@ -24,7 +23,7 @@ router.get('/methods', (req, res) => {
   res.json(new ApiResponse(200, methods, "Available payment methods"));
 });
 
-router.post("/create-final-order", createFinalOrderInDB);
+// router.post("/create-final-order", createFinalOrderInDB);
 router.get("/get-single-order/:orderId", getOrder);
 router.get("/get-order-by-user-id", getOrdersByUserId);
 router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersForAdmin);
