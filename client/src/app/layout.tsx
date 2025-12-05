@@ -89,7 +89,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="antialiased">
-        {/* Theme must be initialized BEFORE any content renders */}
         <ThemeInitializer />
         
         <WarmupProvider>
