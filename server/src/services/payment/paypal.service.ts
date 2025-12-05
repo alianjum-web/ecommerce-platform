@@ -34,6 +34,7 @@ export class PayPalService implements PaymentMethod {
     this.validateConfiguration();
   }
 
+  
   private validateConfiguration(): void {
     const missingVars: string[] = [];
 
@@ -151,7 +152,7 @@ export class PayPalService implements PaymentMethod {
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-
+  
   private isValidPayPalCertUrl(url: string): boolean {
     const validDomains = [
       "api-m.paypal.com",
@@ -250,38 +251,45 @@ export class PayPalService implements PaymentMethod {
   }
 
   async capturePayment(paymentId: string): Promise<PaymentResult> {
-    try {
-      if (!paymentId || typeof paymentId !== "string") {
-        return {
-          success: false,
-          error: "Valid paymentId is required",
-        };
-      }
-
-      const response = await this.makePayPalRequest<PayPalCaptureResponse>(
-        "POST",
-        `${this.baseApi}/v2/checkout/orders/${paymentId}/capture`,
-        {}
-      );
-
-      // Validate capture was successful
-      const isSuccessful = response.data.status === "COMPLETED";
-
-      return {
-        success: isSuccessful,
-        paymentId: response.data.id,
-        data: response.data,
-        ...(isSuccessful
-          ? {}
-          : { error: `Capture status: ${response.data.status}` }),
-      };
-    } catch (error) {
+  try {
+    if (!paymentId || typeof paymentId !== "string") {
       return {
         success: false,
-        error: getErrorMessage(error),
+        error: "Valid paymentId is required",
       };
     }
+
+    const response = await this.makePayPalRequest<PayPalCaptureResponse>(
+      "POST",
+      `${this.baseApi}/v2/checkout/orders/${paymentId}/capture`,
+      {}
+    );
+
+    // Validate capture was successful
+    const isSuccessful = response.data.status === "COMPLETED";
+    
+    // **FIXED: Get the actual capture ID from the response**
+    const captureId = response.data.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+    
+    console.log(`✅ Capture successful! Order ID: ${paymentId}, Capture ID: ${captureId}`);
+
+    return {
+      success: isSuccessful,
+      paymentId: captureId || response.data.id,  // Use capture ID first
+      orderId: paymentId,  // Original order ID
+      captureId,  // Explicit capture ID field
+      data: response.data,
+      ...(isSuccessful
+        ? {}
+        : { error: `Capture status: ${response.data.status}` }),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: getErrorMessage(error),
+    };
   }
+}
 
   async verifyWebhookSignature(
     body: Record<string, unknown>,

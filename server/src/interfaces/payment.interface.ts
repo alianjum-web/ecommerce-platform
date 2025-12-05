@@ -25,6 +25,7 @@ export interface PaymentResult {
   success: boolean;
   paymentId?: string;
   orderId?: string;
+  captureId?: string;
   data?: any;
   error?: string;
 }
