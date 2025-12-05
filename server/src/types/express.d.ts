@@ -1,48 +1,4 @@
-// import { Request, Response, NextFunction, Router } from 'express';
 
-// declare global {
-//   namespace Express {
-//     interface Request {
-//       validatedData?: any;
-//       user?: {
-//         userId: string;
-//         email: string;
-//         role?: string;
-//       };
-//       query: any;
-//       params: any;
-//       cookies: any;
-//       headers: any;
-//       files?: any;
-//     }
-
-//     namespace Multer {
-//       interface File {
-//         fieldname: string;
-//         originalname: string;
-//         encoding: string;
-//         mimetype: string;
-//         size: number;
-//         destination: string;
-//         filename: string;
-//         path: string;
-//         buffer: Buffer;
-//       }
-//     }
-//   }
-
-//   namespace NodeJS {
-//     interface ProcessEnv {
-//       NODE_ENV: 'development' | 'production' | 'test';
-//       PORT?: string;
-//       DATABASE_URL: string;
-//       JWT_SECRET: string;
-//       FRONTEND_URL: string;
-//       CLOUDINARY_CLOUD_NAME: string;
-//       CLOUDINARY_API_KEY: string;
-//       CLOUDINARY_API_SECRET: string;
-//       ACCESS_TOKEN_SECRET: string;
-//       ACCESS_TOKEN_EXPIRY: string;
 import { Request } from 'express';
 
 // Properly extend Express Request type globally
@@ -51,7 +7,7 @@ declare global {
     interface Request {
       validatedData?: any;
       user?: {
-        userId: number;
+        userId: string;
         email: string;
         role?: string;
       };
@@ -111,7 +67,7 @@ export interface AuthenticatedRequest<
   ReqQuery = any
 > extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: {
-    userId: number;
+    userId: string;
     email: string;
     role?: string;
   };

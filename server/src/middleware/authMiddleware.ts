@@ -29,7 +29,7 @@ export const authenticateJwt = async (
     const { payload } = await jwtVerify(accessToken, secret);
 
     req.user = {
-      userId: payload.userId as number,
+      userId: payload.userId as string,
       email: payload.email as string,
       role: payload.role as string,
     };

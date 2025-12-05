@@ -17,7 +17,7 @@ export interface PaymentOrderData {
   }>;
   total: number;
   currency?: string;
-  userId: number;
+  userId: string;
   internalOrderId: string;
 }
 

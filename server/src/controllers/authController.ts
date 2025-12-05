@@ -5,8 +5,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
+import { decode } from "punycode";
 
-function signAccessToken(userId: number, email: string, role: string) {
+function signAccessToken(userId: string, email: string, role: string) {
   return jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
     expiresIn: "15m",
   });
@@ -25,10 +26,13 @@ const cookieOptions = {
   path: "/",
 } as const;
 
-async function setTokens(res: Response, accessToken: string, refreshToken: string) {
+async function setTokens(
+  res: Response,
+  accessToken: string,
+  refreshToken: string
+) {
   const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // ✅ 15 minutes (matches JWT)
   const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-
 
   // Access Token Cookie (15 minutes)
   res.cookie("accessToken", accessToken, {
@@ -84,22 +88,22 @@ const register = async (req: Request, res: Response): Promise<void> => {
 // UPDATED authController.ts - Login function
 const login = async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
-  
+
   try {
     const { email, password } = req.body;
 
     // Input validation
     if (!email || !password) {
       console.warn("❌ Missing credentials");
-      res.status(400).json({ 
-        success: false, 
-        error: "Email and password are required" 
+      res.status(400).json({
+        success: false,
+        error: "Email and password are required",
       });
       return;
     }
 
     console.log(`🔍 Attempting login for: ${email}`);
-    
+
     // Optimized database query with select only needed fields
     const user = await prisma.user.findUnique({
       where: { email },
@@ -109,26 +113,26 @@ const login = async (req: Request, res: Response): Promise<void> => {
         email: true,
         password: true,
         role: true,
-      }
+      },
     });
 
     if (!user) {
       console.warn(`❌ User not found: ${email}`);
-      res.status(401).json({ 
-        success: false, 
-        error: "Invalid credentials" 
+      res.status(401).json({
+        success: false,
+        error: "Invalid credentials",
       });
       return;
     }
 
     // Password comparison
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
       console.warn(`❌ Invalid password for: ${email}`);
-      res.status(401).json({ 
-        success: false, 
-        error: "Invalid credentials" 
+      res.status(401).json({
+        success: false,
+        error: "Invalid credentials",
       });
       return;
     }
@@ -161,14 +165,13 @@ const login = async (req: Request, res: Response): Promise<void> => {
         role: user.role,
       },
     });
-
   } catch (error) {
     const endTime = Date.now();
     console.error(`💥 Login error after ${endTime - startTime}ms:`, error);
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       success: false,
-      error: "Login failed - please try again" 
+      error: "Login failed - please try again",
     });
   }
 };
@@ -185,11 +188,7 @@ const getCurrentUser = async (req: Request, res: Response) => {
 
     // Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-    const userId = Number((decoded as any).userId); // convert to number
-    if (Number.isNaN(userId)) {
-      return res.status(401).json({ error: "Invalid token payload" });
-    }
-
+    const userId = (decoded as any).userId;
     // Fetch user from DB
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -213,10 +212,13 @@ const getCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
-const refreshAccessToken = async (req: Request, res: Response): Promise<void> => {
+const refreshAccessToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const refreshToken = req.cookies?.refreshToken;
-    
+
     if (!refreshToken) {
       res.status(401).json({ success: false, error: "Refresh token required" });
       return;
@@ -225,12 +227,12 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
     // Verify refresh token
     const hashedToken = hashToken(refreshToken);
     const user = await prisma.user.findFirst({
-      where: { refreshToken: hashedToken }
+      where: { refreshToken: hashedToken },
     });
 
     if (!user) {
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
       res.status(401).json({ success: false, error: "Invalid refresh token" });
       return;
     }
@@ -238,14 +240,14 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
     // Issue new access token
     const newAccessToken = signAccessToken(user.id, user.email, user.role);
     const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes in milliseconds
-    
+
     res.cookie("accessToken", newAccessToken, {
       ...cookieOptions,
       maxAge: ACCESS_TOKEN_MAX_AGE,
     });
 
     const now = Date.now();
-    
+
     // ✅ CRITICAL: Return ALL values in milliseconds
     res.json({
       success: true,
@@ -263,15 +265,13 @@ const refreshAccessToken = async (req: Request, res: Response): Promise<void> =>
         suggestedRefreshTime: 12 * 60 * 1000, // 12 minutes in milliseconds (80% of 15)
         // Alternative: Return absolute timestamp instead
         // suggestedRefreshTime: now + (12 * 60 * 1000), // Absolute time
-      }
+      },
     });
-
   } catch (error) {
     console.error("Token refresh error:", error);
     res.status(500).json({ success: false, error: "Token refresh failed" });
   }
 };
-
 
 const logout = async (req: Request, res: Response): Promise<void> => {
   const isProd = process.env.NODE_ENV === "production";

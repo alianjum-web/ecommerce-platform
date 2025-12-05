@@ -30,10 +30,9 @@ const createPaymentOrder = asyncHandler(
         return next(new ApiError(400, `Payment method '${paymentMethod}' is not supported`));
       }
 
-      // 2. FIRST create a DRAFT order in your database
       const draftOrder = await prisma.order.create({
         data: {
-          userId, // Convert to Int if needed
+          userId, 
           addressId,
           couponId,
           total,
@@ -60,7 +59,7 @@ const createPaymentOrder = asyncHandler(
         }
       });
 
-      // 3. Create payment with external provider
+
       const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
 
       const paymentOrderData: PaymentOrderData = {
@@ -74,7 +73,6 @@ const createPaymentOrder = asyncHandler(
       const paymentResult = await paymentService.createOrder(paymentOrderData);
 
       if (!paymentResult.success) {
-        // Update order status to PAYMENT_FAILED
         await prisma.order.update({
           where: { id: draftOrder.id },
           data: { 
@@ -208,7 +206,7 @@ const capturePayment = asyncHandler(
 );
 
 // Helper function for stock and cart updates
-async function updateStockAndClearCart(userId: number, items: any[]) {
+async function updateStockAndClearCart(userId: string, items: any[]) {
   // Update stock for each product
   for (const item of items) {
     if (item.productId) {

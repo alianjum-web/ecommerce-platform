@@ -1,7 +1,7 @@
 import {  prisma } from "../../server"
 
 export class CartService {
-  static async getOrCreateCart(userId: number) {
+  static async getOrCreateCart(userId: string) {
     return await prisma.cart.upsert({
       where: { userId },
       create: { userId },

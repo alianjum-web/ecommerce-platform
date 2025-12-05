@@ -9,11 +9,12 @@ import { CartService } from "../services/cart/get-cart-item";
 const addToCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     console.log("Entered successfully.");
-    const rawUserId = req.user?.userId;
-    const userId =
-      typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
+    const userId = req.user?.userId;
+    // const userId =
+    //   typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
 
-    if (!userId || Number.isNaN(userId)) {
+    // if (!userId || Number.isNaN(userId)) {
+    if (!userId) {
       return res
         .status(401)
         .json(
@@ -99,11 +100,11 @@ const getCart = asyncHandler(
     try {
       const userId = req.user?.userId;
 
-      if (!userId || typeof userId !== "number") {
-        return res.status(401).json(new ValidationError("Unauthorized user"));
-      }
+      // if (!userId || typeof userId !== "number") {
+      //   return res.status(401).json(new ValidationError("Unauthorized user"));
+      // }
 
-      const cart = await CartService.getOrCreateCart(userId);
+      const cart = await CartService.getOrCreateCart(userId!);
       const validationIssues = await CartService.validateCartItems(cart.items);
 
       const cartItems = cart.items
@@ -146,9 +147,9 @@ const getCart = asyncHandler(
 
 const removeFromCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const rawUserId = req.user?.userId;
-    const userId =
-      typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
+    const userId = req.user?.userId;
+    // const userId =
+      // typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
     const { id } = req.params;
 
     if (!id) {
@@ -174,9 +175,9 @@ const removeFromCart = asyncHandler(
 
 const updateCartItemQuantity = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const rawUserId = req.user?.userId;
-    const userId =
-      typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
+    const userId = req.user?.userId;
+    // const userId =
+    //   typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
     const { quantity } = req.body;
     const { id } = req.params;
 
@@ -236,9 +237,9 @@ const updateCartItemQuantity = asyncHandler(
 // all the items in the cart with the userId - for 1 item use delete()
 const clearEntireCart = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const rawUserId = req.user?.userId;
-    const userId =
-      typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
+    const userId = req.user?.userId;
+    // const userId =
+    //   typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
 
     if (!userId) {
       return res.status(401).json(new ApiError(401, "Unauthenticated user"));

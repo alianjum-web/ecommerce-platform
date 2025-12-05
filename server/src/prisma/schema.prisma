@@ -8,21 +8,25 @@ datasource db {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
+  id           String    @id @default(uuid()) 
   name         String?
   email        String    @unique
   password     String
   role         Role      @default(USER)
+  emailVerified Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  lastLogin     DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   refreshToken String?   @unique
   addresses    Address[]
   cart         Cart?
   orders       Order[]
+  userCoupons  UserCoupon[]
 }
 
 model Product {
-  id          String      @id @default(cuid())
+  id          String      @id @default(uuid())
   name        String
   brand       String
   description String
@@ -30,21 +34,23 @@ model Product {
   gender      String
   sizes       String[]
   colors      String[]
-  price       Float
-  stock       Int
-  soldCount   Int
-  rating      Float?
+  price       Float       // Use Float instead of Decimal
+  stock       Int         @default(0)
+  soldCount   Int         @default(0)
+  rating      Float?      // Use Float instead of Decimal
   images      String[]
+  isActive    Boolean     @default(true)
+  isArchived  Boolean     @default(false)
+  isFeatured  Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  isFeatured  Boolean     @default(false)
-  cartItems   CartItem[] // ✅ Reverse relation
-  orderItems  OrderItem[] // ✅ Also add this for OrderItem relation
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
 }
 
 model Cart {
-  id        String     @id @default(cuid())
-  userId    Int        @unique
+  id        String     @id @default(uuid())
+  userId    String        @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -54,7 +60,7 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   cartId    String
   productId String
   quantity  Int      @default(1)
@@ -71,35 +77,49 @@ model CartItem {
 }
 
 model FeatureBanner {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   imageUrl  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Coupon {
-  id              String   @id @default(cuid())
-  code            String   @unique
-  discountPercent Float
+  id              String     @id @default(uuid())
+  code            String     @unique
+  discountPercent Float      // Percentage (0-100)
   startDate       DateTime
   endDate         DateTime
   usageLimit      Int
-  usageCount      Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  isActive        Boolean  @default(true)
-  maxDiscount     Float?
-  minOrderValue   Float?
-  userIds         String[]
+  usageCount      Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  isActive        Boolean    @default(true)
+  maxDiscount     Float?     // Maximum discount amount
+  minOrderValue   Float?     // Minimum order value required
   orders          Order[]
+  userCoupons     UserCoupon[]  // ✅ Many-to-many relation with users
 
   @@index([code])
   @@index([isActive])
 }
 
+model UserCoupon {
+  id        String   @id @default(uuid())
+  userId    String
+  couponId  String
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@index([userId])
+  @@index([couponId])
+}
 model Address {
-  id         String   @id @default(cuid())
-  userId     Int
+  id         String   @id @default(uuid())
+  userId     String
   name       String
   address    String
   city       String
@@ -116,13 +136,12 @@ model Address {
   @@index([isDefault])
 }
 
-// UPDATED Order model with payment flow support
 model Order {
-  id                String        @id @default(cuid())
-  userId            Int
+  id                String        @id @default(uuid())
+  userId            String
   addressId         String
   couponId          String?
-  total             Float
+  total             Float         // Use Float
   currency          String        @default("USD")
   status            OrderStatus   @default(PENDING)
   paymentMethod     PaymentMethod
@@ -150,7 +169,7 @@ model Order {
 }
 
 model OrderItem {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid())
   orderId         String
   productId       String?
   productName     String
@@ -158,7 +177,7 @@ model OrderItem {
   quantity        Int
   size            String?
   color           String?
-  price           Float
+  price           Float    // Use Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
