@@ -1,4 +1,4 @@
-// app/api/auth/refresh-token/route.ts - ENHANCED DEBUGGING
+// app/api/auth/refresh-token/route.ts - CORRECTED
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -8,13 +8,15 @@ const ERROR_MESSAGES = {
   TIMEOUT: "Refresh token timeout",
 } as const;
 
-const TIMEOUT_MS = 8000; // 8 seconds for token refresh
+const TIMEOUT_MS = 8000;
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL || process.env.DEVE_URL;
+  const BACKEND_URL = process.env.NODE_ENV === "production" 
+    ? process.env.BACKEND_URL 
+    : process.env.DEVE_URL;
 
   if (!BACKEND_URL) {
-    console.error("Configuration error: BACKEND_URL not set for refresh token");
+    console.error("Configuration error: BACKEND_URL not set");
     return NextResponse.json(
       {
         success: false,
@@ -26,27 +28,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const cookieHeader = req.headers.get("cookie") || "";
+     const refreshCookie = req.cookies.get("refreshToken")?.value;
 
-    // 🔍 DEBUG: Log what cookies we're receiving
-    console.log("🍪 Received cookies:", {
-      hasRefreshToken: cookieHeader.includes("refreshToken"),
-      hasAccessToken: cookieHeader.includes("accessToken"),
-      cookieLength: cookieHeader.length,
-      cookies: cookieHeader.split(";").map((c) => c.trim()),
-    });
+  console.log("🔍 refreshCookie:", typeof refreshCookie !== "undefined");
 
-    // Validate that we have necessary cookies
-    if (!cookieHeader.includes("refreshToken")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No refresh token available",
-          code: "NO_REFRESH_TOKEN",
-        },
-        { status: 401 }
-      );
-    }
+  if (!refreshCookie) {
+    return NextResponse.json(
+      { success: false, error: "No refresh token available", code: "NO_REFRESH_TOKEN" },
+      { status: 401 }
+    );
+  }
+    
+
+    // console.log("✅ Refresh token found, length:", cookies.refreshToken?.length);
 
     // Add timeout protection
     const controller = new AbortController();
@@ -56,99 +50,87 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Cookie: cookieHeader,
+        Cookie: refreshCookie, // Forward original cookies
         "User-Agent": "NextJS-Auth-Proxy/1.0",
+        // Optional: You can also send just the refresh token
+        // "X-Refresh-Token": cookies.refreshToken
       },
       credentials: "include",
       signal: controller.signal,
     });
 
-    console.log("🔧 Backend refresh response:", {
+    console.log("🔧 Backend Response:", {
       status: backendRes.status,
       statusText: backendRes.statusText,
       ok: backendRes.ok,
+      url: `${BACKEND_URL}/api/auth/refresh-token`,
     });
 
     clearTimeout(timeoutId);
 
-    // Handle backend errors
     if (!backendRes.ok) {
       const errorText = await backendRes.text();
-      let errorData;
-
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = {
-          error: `Backend refresh failed with ${backendRes.status}`,
-        };
-      }
-
-      console.warn(`Token refresh failed: ${backendRes.status}`, {
+      console.error("❌ Backend error response:", {
         status: backendRes.status,
-        hasCookies: !!cookieHeader,
+        errorText: errorText.substring(0, 200),
+        headers: Object.fromEntries(backendRes.headers.entries()),
       });
 
       return NextResponse.json(
         {
           success: false,
-          error: errorData.error || `Token refresh failed`,
+          error: "Token refresh failed",
           code: `REFRESH_FAILED_${backendRes.status}`,
+          debug: {
+            backendStatus: backendRes.status,
+            backendResponse: errorText.substring(0, 200),
+          }
         },
         { status: backendRes.status }
       );
     }
 
-    if (backendRes.ok) {
-      const responseData = await backendRes.json();
+    const responseData = await backendRes.json();
+    console.log("✅ Token refresh successful:", {
+      hasAccessToken: !!responseData.accessToken,
+      hasTokenInfo: !!responseData.tokenInfo,
+    });
 
-      // ✅ ENSURE tokenInfo always exists with correct values
-      const enhancedData = {
-        ...responseData,
-        tokenInfo: {
-          // Use backend tokenInfo if available, otherwise use defaults
-          accessTokenExpiresIn:
-            responseData.tokenInfo?.accessTokenExpiresIn ?? 15 * 60,
-          refreshTokenExpiresIn:
-            responseData.tokenInfo?.refreshTokenExpiresIn ?? 7 * 24 * 60 * 60,
-          refreshedAt:
-            responseData.tokenInfo?.refreshedAt ?? new Date().toISOString(),
-          suggestedRefreshTime:
-            responseData.tokenInfo?.suggestedRefreshTime ?? 12 * 60,
-          // Add proxy metadata for debugging
-          proxied: true,
-          proxyTimestamp: new Date().toISOString(),
-        },
-      };
+    const enhancedData = {
+      ...responseData,
+      tokenInfo: {
+        accessTokenExpiresIn: responseData.tokenInfo?.accessTokenExpiresIn ?? 15 * 60,
+        refreshTokenExpiresIn: responseData.tokenInfo?.refreshTokenExpiresIn ?? 7 * 24 * 60 * 60,
+        refreshedAt: responseData.tokenInfo?.refreshedAt ?? new Date().toISOString(),
+        suggestedRefreshTime: responseData.tokenInfo?.suggestedRefreshTime ?? 12 * 60,
+        proxied: true,
+        proxyTimestamp: new Date().toISOString(),
+      },
+    };
 
-      const response = NextResponse.json(enhancedData, {
-        status: backendRes.status,
-      });
+    const response = NextResponse.json(enhancedData, {
+      status: backendRes.status,
+    });
 
-      // ✅ Using for...of for better performance
-      const setCookieHeaders = backendRes.headers.getSetCookie();
-      console.log(`🍪 Backend Set-Cookie headers:`, setCookieHeaders);
-
-      if (setCookieHeaders?.length > 0) {
-        console.log(
-          `🔄 Token refresh successful, forwarding ${setCookieHeaders.length} cookies`
-        );
-
-        for (const cookie of setCookieHeaders) {
-          response.headers.append("Set-Cookie", cookie);
-          console.log("   Appended:", cookie.substring(0, 80) + "...");
-        }
-      } else {
-        console.log("🔍 No Set-Cookie headers from backend");
+    // Forward cookies from backend
+    const setCookieHeaders = backendRes.headers.getSetCookie?.() || [];
+    console.log(`🍪 Backend Set-Cookie headers count:`, setCookieHeaders.length);
+    
+    if (setCookieHeaders.length > 0) {
+      for (const cookie of setCookieHeaders) {
+        response.headers.append("Set-Cookie", cookie);
+        console.log("   Set-Cookie:", cookie.substring(0, 80) + (cookie.length > 80 ? "..." : ""));
       }
-
-      // Add security headers
-      response.headers.set("X-Content-Type-Options", "nosniff");
-      response.headers.set("X-Frame-Options", "DENY");
-      return response;
     }
+
+    return response;
+
   } catch (error: any) {
-    console.error("Refresh token proxy error:", error);
+    console.error("❌ Refresh token proxy error:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
 
     if (error.name === "AbortError") {
       return NextResponse.json(
