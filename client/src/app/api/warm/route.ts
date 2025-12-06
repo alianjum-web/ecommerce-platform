@@ -5,7 +5,10 @@ import type { NextRequest } from "next/server";
 const TIMEOUT_MS = 10000;
 
 export async function GET(req: NextRequest) {
-  const BACKEND_URL = process.env.BACKEND_URL || process.env.DEVE_URL;
+   const BACKEND_URL =
+    process.env.NODE_ENV === "production"
+      ? process.env.BACKEND_URL
+      : process.env.DEVE_URL;
 
   if (!BACKEND_URL) {
     console.error("Configuration error: BACKEND_URL not set");

@@ -1,6 +1,7 @@
 // app/api/auth/refresh-token/route.ts - CORRECTED
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { proxyLogger } from "@/utils/Logger";
 
 const ERROR_MESSAGES = {
   BACKEND_NOT_CONFIGURED: "Backend URL not configured",
@@ -11,12 +12,13 @@ const ERROR_MESSAGES = {
 const TIMEOUT_MS = 8000;
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL = process.env.NODE_ENV === "production" 
-    ? process.env.BACKEND_URL 
-    : process.env.DEVE_URL;
+  const BACKEND_URL =
+    process.env.NODE_ENV === "production"
+      ? process.env.BACKEND_URL
+      : process.env.DEVE_URL;
 
   if (!BACKEND_URL) {
-    console.error("Configuration error: BACKEND_URL not set");
+    proxyLogger.error("Configuration error: BACKEND_URL not set");
     return NextResponse.json(
       {
         success: false,
@@ -28,38 +30,78 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-     const refreshCookie = req.cookies.get("refreshToken")?.value;
+    // Get ALL cookies from the request
+    const allCookies = req.cookies.getAll();
+    const cookieNames = allCookies.map((cookie) => cookie.name);
 
-  console.log("🔍 refreshCookie:", typeof refreshCookie !== "undefined");
+    proxyLogger.info("🔍 All cookies present:", cookieNames);
+    proxyLogger.info("🔍 Has refreshToken:", req.cookies.has("refreshToken"));
 
-  if (!refreshCookie) {
-    return NextResponse.json(
-      { success: false, error: "No refresh token available", code: "NO_REFRESH_TOKEN" },
-      { status: 401 }
-    );
-  }
-    
+    // Get the refreshToken cookie specifically
+    const refreshToken = req.cookies.get("refreshToken")?.value;
 
-    // console.log("✅ Refresh token found, length:", cookies.refreshToken?.length);
+    if (!refreshToken) {
+      proxyLogger.error("❌ No refreshToken cookie found in request");
+      proxyLogger.error(
+        "Available cookies:",
+        allCookies.map((c) => ({
+          name: c.name,
+          value: c.value ? `[${c.value.length} chars]` : "empty",
+        }))
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No refresh token available",
+          code: "NO_REFRESH_TOKEN",
+          debug: {
+            availableCookies: cookieNames,
+            cookieCount: allCookies.length,
+          },
+        },
+        { status: 401 }
+      );
+    }
+
+    proxyLogger.log("✅ Refresh token found, length:", refreshToken.length);
+
+    // Prepare headers for backend request
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "User-Agent": "NextJS-Auth-Proxy/1.0",
+    };
+
+    // OPTION 1: Forward ALL cookies (recommended)
+    // Get the full cookie string
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+      proxyLogger.log("📦 Forwarding all cookies via Cookie header");
+    } else {
+      // OPTION 2: Construct cookie header with just the refresh token
+      headers["Cookie"] = `refreshToken=${refreshToken}`;
+      proxyLogger.log("📦 Constructed Cookie header with refresh token only");
+    }
 
     // Add timeout protection
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+    proxyLogger.log("🚀 Sending request to backend:", {
+      url: `${BACKEND_URL}/api/auth/refresh-token`,
+      hasCookieHeader: !!headers["Cookie"],
+      cookieHeaderLength: headers["Cookie"]?.length,
+    });
+
     const backendRes = await fetch(`${BACKEND_URL}/api/auth/refresh-token`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: refreshCookie, // Forward original cookies
-        "User-Agent": "NextJS-Auth-Proxy/1.0",
-        // Optional: You can also send just the refresh token
-        // "X-Refresh-Token": cookies.refreshToken
-      },
-      credentials: "include",
+      headers,
+      credentials: "include", // Important: include cookies
       signal: controller.signal,
     });
 
-    console.log("🔧 Backend Response:", {
+    proxyLogger.log("🔧 Backend Response:", {
       status: backendRes.status,
       statusText: backendRes.statusText,
       ok: backendRes.ok,
@@ -69,12 +111,12 @@ export async function POST(req: NextRequest) {
     clearTimeout(timeoutId);
 
     if (!backendRes.ok) {
-      const errorText = await backendRes.text();
-      console.error("❌ Backend error response:", {
-        status: backendRes.status,
-        errorText: errorText.substring(0, 200),
-        headers: Object.fromEntries(backendRes.headers.entries()),
-      });
+      let errorText = "";
+      try {
+        errorText = await backendRes.text();
+      } catch (e) {
+        errorText = "Could not read error response";
+      }
 
       return NextResponse.json(
         {
@@ -84,14 +126,16 @@ export async function POST(req: NextRequest) {
           debug: {
             backendStatus: backendRes.status,
             backendResponse: errorText.substring(0, 200),
-          }
+            nextJsHadRefreshToken: !!refreshToken,
+            cookieNames: cookieNames,
+          },
         },
         { status: backendRes.status }
       );
     }
 
     const responseData = await backendRes.json();
-    console.log("✅ Token refresh successful:", {
+    proxyLogger.log("✅ Token refresh successful:", {
       hasAccessToken: !!responseData.accessToken,
       hasTokenInfo: !!responseData.tokenInfo,
     });
@@ -99,10 +143,15 @@ export async function POST(req: NextRequest) {
     const enhancedData = {
       ...responseData,
       tokenInfo: {
-        accessTokenExpiresIn: responseData.tokenInfo?.accessTokenExpiresIn ?? 15 * 60,
-        refreshTokenExpiresIn: responseData.tokenInfo?.refreshTokenExpiresIn ?? 7 * 24 * 60 * 60,
-        refreshedAt: responseData.tokenInfo?.refreshedAt ?? new Date().toISOString(),
-        suggestedRefreshTime: responseData.tokenInfo?.suggestedRefreshTime ?? 12 * 60,
+        accessTokenExpiresIn:
+          responseData.tokenInfo?.accessTokenExpiresIn ?? 15 * 60 * 1000,
+        refreshTokenExpiresIn:
+          responseData.tokenInfo?.refreshTokenExpiresIn ??
+          7 * 24 * 60 * 60 * 1000,
+        refreshedAt:
+          responseData.tokenInfo?.refreshedAt ?? new Date().toISOString(),
+        suggestedRefreshTime:
+          responseData.tokenInfo?.suggestedRefreshTime ?? 12 * 60 * 1000,
         proxied: true,
         proxyTimestamp: new Date().toISOString(),
       },
@@ -112,21 +161,30 @@ export async function POST(req: NextRequest) {
       status: backendRes.status,
     });
 
-    // Forward cookies from backend
-    const setCookieHeaders = backendRes.headers.getSetCookie?.() || [];
-    console.log(`🍪 Backend Set-Cookie headers count:`, setCookieHeaders.length);
-    
-    if (setCookieHeaders.length > 0) {
-      for (const cookie of setCookieHeaders) {
+    // Forward Set-Cookie headers from backend
+    const setCookieHeaders = backendRes.headers.get("set-cookie");
+    if (setCookieHeaders) {
+      // Handle multiple Set-Cookie headers
+      const cookiesArray = Array.isArray(setCookieHeaders)
+        ? setCookieHeaders
+        : [setCookieHeaders];
+
+      proxyLogger.log(`🍪 Backend Set-Cookie headers count:`, cookiesArray.length);
+
+      for (const cookie of cookiesArray) {
         response.headers.append("Set-Cookie", cookie);
-        console.log("   Set-Cookie:", cookie.substring(0, 80) + (cookie.length > 80 ? "..." : ""));
+        proxyLogger.log(
+          "   Set-Cookie:",
+          cookie.substring(0, 80) + (cookie.length > 80 ? "..." : "")
+        );
       }
+    } else {
+      proxyLogger.log("📭 No Set-Cookie headers from backend");
     }
 
     return response;
-
   } catch (error: any) {
-    console.error("❌ Refresh token proxy error:", {
+    proxyLogger.error("❌ Refresh token proxy error:", {
       name: error.name,
       message: error.message,
       stack: error.stack,

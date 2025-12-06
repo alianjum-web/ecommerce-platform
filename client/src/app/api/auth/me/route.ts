@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const BACKEND_URL =  process.env.BACKEND_URL || process.env.DEVE_URL;
-  
+   const BACKEND_URL =
+    process.env.NODE_ENV === "production"
+      ? process.env.BACKEND_URL
+      : process.env.DEVE_URL;
   // Early return for missing config
   if (!BACKEND_URL) {
     console.error("BACKEND_URL not configured");

@@ -13,8 +13,10 @@ const ERROR_MESSAGES = {
 const TIMEOUT_MS = 20000; // 10 seconds
 
 export async function POST(req: NextRequest) {
-  const BACKEND_URL =
-    process.env.BACKEND_URL || process.env.DEVE_URL;
+ const BACKEND_URL =
+    process.env.NODE_ENV === "production"
+      ? process.env.BACKEND_URL
+      : process.env.DEVE_URL;
 
   // Early validation with better error handling
   if (!BACKEND_URL) {
