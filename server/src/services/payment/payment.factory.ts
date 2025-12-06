@@ -1,34 +1,33 @@
 // services/payment/payment.factory.ts
-import { PaymentMethod } from "../../interfaces/payment.interface";
-import { PayPalService } from "./paypal.service";
-import { StripeService } from "./stripe.service";
-import { CardPaymentService } from "./card-payment.service";
+import { BasePaymentService } from "./base.payment.service";
+import { PayPalService } from "./providers/paypal.service";
+import { StripeService } from "./providers/stripe.service";
+import { CardService } from "./providers/card.service";
 
 export class PaymentFactory {
-  static createPaymentMethod(method: string): PaymentMethod {
-    if (!method) {
-      throw new Error("Payment method is required");
-    }
-    switch (method.toUpperCase()) {
+  // Main method
+  static createPaymentService(method: string): BasePaymentService {
+    const normalizedMethod = method.toUpperCase();
+    
+    switch (normalizedMethod) {
       case "PAYPAL":
         return new PayPalService();
-
       case "STRIPE":
         return new StripeService();
-
       case "CARD":
       case "CREDIT_CARD":
-      case "DEBIT_CARD":
-      case "VISA":
-      case "MASTERCARD":
-        return new CardPaymentService();
-
+        return new CardService();
       default:
-        throw new Error(`Payment method '${method}' is not supported`);
+        throw new Error(`Unsupported payment method: ${method}`);
     }
   }
 
+  // Alias method for backward compatibility
+  static createPaymentMethod(method: string): BasePaymentService {
+    return this.createPaymentService(method);
+  }
+
   static getAvailableMethods(): string[] {
-    return ["PAYPAL", "STRIPE", "CREDIT_CARD"];
+    return ["PAYPAL", "STRIPE", "CARD"];
   }
 }
