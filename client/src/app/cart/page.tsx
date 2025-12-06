@@ -54,7 +54,6 @@ function UserCartPage() {
     fetchCart();
   }, [fetchCart]);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (isMounted && !user && !isLoading) {
       router.push("/auth/login");
@@ -80,7 +79,6 @@ function UserCartPage() {
     }
   };
 
-  // Get cart items safely
   const cartItems = getCartItems(items);
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -88,7 +86,6 @@ function UserCartPage() {
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + shipping + tax;
 
-  // Show loading skeleton
   if (!isMounted || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-card/20 py-8">
@@ -99,7 +96,6 @@ function UserCartPage() {
     );
   }
 
-  // Redirect if not authenticated
   if (!user) {
     return null;
   }
@@ -150,7 +146,6 @@ function UserCartPage() {
           <CartEmptyState onContinueShopping={() => router.push("/listing")} />
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Cart Items */}
             <div className="flex-1 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">
