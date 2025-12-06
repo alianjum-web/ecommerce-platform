@@ -4,10 +4,11 @@ import { prisma } from "../server";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError, InternalServerError, UnauthorizedError } from "../utils/ApiError";
-// import { getErrorMessage } from "../utils/catchError";
 import { PaymentFactory } from "../services/payment/payment.factory";
-import { PaymentOrderData } from "../interfaces/payment.interface";
-import type { MinimalProduct } from "../interfaces/product";
+import { PaymentOrderData } from "../services/interfaces/payment.interface";
+import type { MinimalProduct } from "../services/interfaces/product";
+import { PayPalService } from "../services/payment/providers/paypal.service";
+const paypalService = new PayPalService();
 
 async function updateStockAndClearCart(userId: string, items: any[]) {
   // Update stock for each product
@@ -95,8 +96,8 @@ const createPaymentOrder = asyncHandler(
         }
       });
 
-
-      const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
+      // FIXED: Use createPaymentService instead of createPaymentMethod
+      const paymentService = PaymentFactory.createPaymentService(paymentMethod);
 
       const paymentOrderData: PaymentOrderData = {
         items,
@@ -120,33 +121,54 @@ const createPaymentOrder = asyncHandler(
         return next(new ApiError(400, paymentResult.error || "Payment order creation failed"));
       }
 
-      // 4. Update order with PayPal info and change to PENDING_PAYMENT
+      // 4. Update order with provider info
+      const updateData: any = {
+        providerOrderId: paymentResult.orderId,
+        paymentId: paymentResult.paymentId,
+        status: "PENDING_PAYMENT",
+        paymentStatus: "PENDING"
+      };
+
+      // Add provider-specific fields
+      if (paymentResult.approvalUrl) {
+        updateData.approvalUrl = paymentResult.approvalUrl;
+      }
+      if (paymentResult.url) {
+        updateData.checkoutUrl = paymentResult.url;
+      }
+      if (paymentResult.clientSecret) {
+        updateData.clientSecret = paymentResult.clientSecret;
+      }
+
       await prisma.order.update({
         where: { id: draftOrder.id },
-        data: {
-          providerOrderId: paymentResult.orderId,
-          paymentId: paymentResult.paymentId,
-          status: "PENDING_PAYMENT", // Waiting for user approval
-          paymentStatus: "PENDING"
-        }
+        data: updateData
       });
 
-      // 5. Find the approval URL for PayPal
-      const approvalUrl = paymentResult.data.links?.find(
-        (link: any) => link.rel === "approve"
-      )?.href;
+      // 5. Prepare response
+      const responseData: any = {
+        internalOrderId: draftOrder.id,
+        paymentId: paymentResult.paymentId!,
+        providerOrderId: paymentResult.orderId!,
+        status: "PENDING_PAYMENT",
+        paymentMethod: paymentMethod.toUpperCase(),
+      };
+
+      // Add provider-specific response fields
+      if (paymentResult.approvalUrl) {
+        responseData.approvalUrl = paymentResult.approvalUrl;
+      }
+      if (paymentResult.url) {
+        responseData.url = paymentResult.url; // For Stripe
+      }
+      if (paymentResult.clientSecret) {
+        responseData.clientSecret = paymentResult.clientSecret;
+      }
 
       return res.status(200).json(
         new ApiResponse(
           200,
-          {
-            internalOrderId: draftOrder.id,
-            paymentId: paymentResult.paymentId,
-            providerOrderId: paymentResult.orderId,
-            approvalUrl: approvalUrl, // User must click this!
-            status: "PENDING_PAYMENT",
-            message: "Order created. User must approve payment on PayPal."
-          },
+          responseData,
           `${paymentMethod} order created successfully`
         )
       );
@@ -158,7 +180,7 @@ const createPaymentOrder = asyncHandler(
 
 const capturePayment = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const { paymentId, paymentMethod, internalOrderId } = req.body;
+    const { paymentId, paymentMethod, internalOrderId, cardData } = req.body;
     const userId = req.user?.userId;
 
     if (!paymentId || !paymentMethod || !internalOrderId) {
@@ -185,9 +207,16 @@ const capturePayment = asyncHandler(
         return next(new ApiError(404, "Order not found or not in correct state"));
       }
 
-      // 2. Capture payment
-      const paymentService = PaymentFactory.createPaymentMethod(paymentMethod);
-      const captureResult = await paymentService.capturePayment(paymentId);
+      // 2. FIXED: Use createPaymentService instead of createPaymentMethod
+      const paymentService = PaymentFactory.createPaymentService(paymentMethod);
+      
+      // For card payments, pass cardData as second parameter
+      let captureResult;
+      if (paymentMethod.toUpperCase() === "CARD" && cardData) {
+        captureResult = await paymentService.capturePayment(paymentId, cardData);
+      } else {
+        captureResult = await paymentService.capturePayment(paymentId);
+      }
 
       if (!captureResult.success) {
         await prisma.order.update({
@@ -200,14 +229,14 @@ const capturePayment = asyncHandler(
         return next(new ApiError(400, captureResult.error || "Payment capture failed"));
       }
 
-      // 3. Update EXISTING order (NOT create new one)
+      // 3. Update EXISTING order
       const updatedOrder = await prisma.order.update({
         where: { id: internalOrderId },
         data: {
           status: "PROCESSING",
           paymentStatus: "COMPLETED",
           paymentId: captureResult.paymentId,
-          providerCaptureId: captureResult.data.id,
+          providerCaptureId: captureResult.captureId || captureResult.data?.id,
           capturedAt: new Date()
         },
         include: {
@@ -243,6 +272,151 @@ const capturePayment = asyncHandler(
     }
   }
 );
+
+// export const paypalWebhook = async (req: AuthenticatedRequest, res: Response) => {
+//   const signature = req.headers["paypal-transmission-sig"] as string;
+//   const transmissionId = req.headers["paypal-transmission-id"] as string;
+//   const timestamp = req.headers["paypal-transmission-time"] as string;
+//   const certUrl = req.headers["paypal-cert-url"] as string;
+//   const webhookId = req.headers["paypal-webhook-id"] as string;
+
+//   // 1. Verify webhook signature
+//   const isValid = await paypalService.verifyWebhookSignature(
+//     req.body,
+//     transmissionId,
+//     timestamp,
+//     signature,
+//     certUrl
+//   );
+
+//   if (!isValid) {
+//     console.error("Invalid webhook signature");
+//     return res.status(400).send("Invalid signature");
+//   }
+
+//   const eventType = req.body.event_type;
+//   const resource = req.body.resource;
+
+//   console.log(`Received PayPal webhook: ${eventType}`, {
+//     orderId: resource?.id,
+//     timestamp: new Date().toISOString(),
+//   });
+
+//   try {
+//     switch (eventType) {
+//       case "CHECKOUT.ORDER.APPROVED":
+//         await handleOrderApproved(resource.id);
+//         break;
+
+//       case "PAYMENT.CAPTURE.COMPLETED":
+//         await handlePaymentCaptured(resource);
+//         break;
+
+//       case "PAYMENT.CAPTURE.DENIED":
+//       case "PAYMENT.CAPTURE.FAILED":
+//         await handlePaymentFailed(resource.id);
+//         break;
+
+//       case "CHECKOUT.ORDER.COMPLETED":
+//         // Order is fully completed
+//         await handleOrderCompleted(resource.id);
+//         break;
+
+//       default:
+//         console.log(`Unhandled webhook event: ${eventType}`);
+//     }
+
+//     res.status(200).send("Webhook processed");
+//   } catch (error) {
+//     console.error("Error processing webhook:", error);
+//     res.status(500).send("Internal server error");
+//   }
+// };
+// // Webhook handlers
+// async function handleOrderApproved(paypalOrderId: string) {
+//   // Update order status when user approves on PayPal
+//   await prisma.order.updateMany({
+//     where: {
+//       providerOrderId: paypalOrderId,
+//       status: "PENDING_PAYMENT",
+//     },
+//     data: {
+//       status: "PAYMENT_APPROVED",
+//       paymentStatus: "APPROVED",
+//       updatedAt: new Date(),
+//     },
+//   });
+// }
+
+// async function handlePaymentCaptured(resource: any) {
+//   const captureId = resource.id;
+//   const paypalOrderId = resource.supplementary_data?.related_ids?.order_id;
+
+//   if (!paypalOrderId) {
+//     console.error("No order ID in capture webhook");
+//     return;
+//   }
+
+//   await prisma.$transaction(async (tx) => {
+//     // Find the order
+//     const order = await tx.order.findFirst({
+//       where: {
+//         providerOrderId: paypalOrderId,
+//         paymentStatus: { in: ["APPROVED", "PENDING"] },
+//       },
+//       include: { items: true },
+//     });
+
+//     if (!order) {
+//       console.error(`Order not found for PayPal order: ${paypalOrderId}`);
+//       return;
+//     }
+
+//     // Update order
+//     await tx.order.update({
+//       where: { id: order.id },
+//       data: {
+//         status: "PROCESSING",
+//         paymentStatus: "COMPLETED",
+//         providerCaptureId: captureId,
+//         capturedAt: new Date(),
+//         paymentId: captureId,
+//       },
+//     });
+
+//     // Update stock and clear cart
+//     await updateStockAndClearCart(order.userId, order.items);
+
+//     // Update coupon usage
+//     if (order.couponId) {
+//       await tx.coupon.update({
+//         where: { id: order.couponId },
+//         data: { usageCount: { increment: 1 } },
+//       });
+//     }
+
+//     console.log(`Order ${order.id} completed via webhook`);
+//   });
+// }
+
+// async function handlePaymentFailed(paypalOrderId: string) {
+//   await prisma.order.updateMany({
+//     where: {
+//       providerOrderId: paypalOrderId,
+//       paymentStatus: { in: ["PENDING", "APPROVED"] },
+//     },
+//     data: {
+//       status: "PAYMENT_FAILED",
+//       paymentStatus: "FAILED",
+//       updatedAt: new Date(),
+//     },
+//   });
+// }
+
+// async function handleOrderCompleted(paypalOrderId: string) {
+//   // Optional: Additional handling for completed orders
+//   console.log(`Order ${paypalOrderId} fully completed`);
+// }
 
 const getOrder = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
