@@ -108,3 +108,4 @@ export const adminLogger = createLogger('ADMIN');
 export const themeLogger = createLogger('THEME');
 export const uiLogger = createLogger('UI');
 export const stateLogger = createLogger('STATE');
+export const proxyLogger = createLogger('PROXY')
