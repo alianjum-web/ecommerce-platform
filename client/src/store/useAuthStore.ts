@@ -7,7 +7,6 @@ import type { User } from "@/types/auth/User";
 import type { TokenExpiryInfoBackendRes } from "@/types/auth/TokenExpiryInfoFromBackend";
 import type { Session } from "@/types/auth/Session";
 import { authLogger } from "@/utils/Logger";
-import exp from "constants";
 
 interface AuthStore {
   user: User | null;
@@ -53,7 +52,6 @@ const axiosInstance = axios.create({
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      // Initial State
       user: null,
       isLoading: false,
       error: null,
@@ -61,7 +59,6 @@ export const useAuthStore = create<AuthStore>()(
       isRefreshing: false,
       refreshPromise: null,
 
-      // Basic state actions
       setUser: (user: User | null) => set({ user }),
 
       isAuthenticated: () => {
@@ -84,7 +81,6 @@ export const useAuthStore = create<AuthStore>()(
 
       clearError: () => set({ error: null }),
 
-      // Auth operations
       initialize: async () => {
         if (typeof window === "undefined") return;
 
@@ -389,7 +385,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ refreshPromise });
         return refreshPromise;
       },
-      
+
       checkSession: async (): Promise<Session> => {
         try {
           const res = await axiosInstance.get("/check-session");
@@ -434,7 +430,6 @@ export const useAuthStore = create<AuthStore>()(
           return null;
         }
       },
-
     }),
     {
       name: "auth-storage",
