@@ -62,9 +62,21 @@ export interface OrderStore {
   userOrders: Order[];
   adminOrders: AdminOrder[];
   error: string | null;
-  createPayPalOrder: (items: any[], total: number) => Promise<string | null>;
-  capturePayPalOrder: (orderId: string) => Promise<any | null>;
-  createFinalOrder: (orderData: CreateOrderData) => Promise<Order | null>;
+  // NEW: Unified methods
+  createOrder: (orderData: {
+    items: any[];
+    total: number;
+    paymentMethod: string;
+    addressId: string;
+    couponId?: string;
+  }) => Promise<any>;
+  
+  captureOrder: (captureData: {
+    paymentId: string;
+    paymentMethod: string;
+    internalOrderId: string;
+    cardData?: any;
+  }) => Promise<any>;
   getOrder: (orderId: string) => Promise<Order | null>;
   updateOrderStatus: (
     orderId: string,
