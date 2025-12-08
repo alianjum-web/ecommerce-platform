@@ -10,45 +10,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   isPaymentProcessing: false,
   userOrders: [],
   adminOrders: [],
-  createPayPalOrder: async (items, total) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axios.post(
-        `${API_ROUTES.ORDER}/create-paypal-order`,
-        { items, total },
-        { withCredentials: true }
-      );
-      set({ isLoading: false });
-      return response.data.id;
-    } catch (error) {
-      set({ error: "Failed to create paypal order", isLoading: false });
-      return null;
-    }
-  },
-  capturePayPalOrder: async (orderId) => {
+
+  createOrder: async (orderData) => {
     set({ isLoading: true, error: null, isPaymentProcessing: true });
     try {
       const response = await axios.post(
-        `${API_ROUTES.ORDER}/capture-paypal-order`,
-        { orderId },
-        { withCredentials: true }
-      );
-      set({ isLoading: false, isPaymentProcessing: false });
-      return response.data;
-    } catch (error) {
-      set({
-        error: "Failed to capture paypal order",
-        isLoading: false,
-        isPaymentProcessing: false,
-      });
-      return null;
-    }
-  },
-  createFinalOrder: async (orderData) => {
-    set({ isLoading: true, error: null, isPaymentProcessing: true });
-    try {
-      const response = await axios.post(
-        `${API_ROUTES.ORDER}/create-final-order`,
+        `${API_ROUTES.ORDER}/create-order`, // CHANGED: Unified endpoint
         orderData,
         { withCredentials: true }
       );
@@ -56,19 +23,46 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       set({
         isLoading: false,
         isPaymentProcessing: false,
-        currentOrder: response.data,
+        currentOrder: response.data.data,
       });
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       set({
         isLoading: false,
         isPaymentProcessing: false,
-        error: "Failed to create the final order with the order data.",
+        error: error.response?.data?.message || "Failed to create order",
       });
-      return null;
+      throw error;
     }
   },
+
+  captureOrder: async (captureData) => {
+    set({ isLoading: true, error: null, isPaymentProcessing: true });
+    try {
+      const response = await axios.post(
+        `${API_ROUTES.ORDER}/capture-order`, // CHANGED: Unified endpoint
+        captureData,
+        { withCredentials: true }
+      );
+
+      set({
+        isLoading: false,
+        isPaymentProcessing: false,
+        currentOrder: response.data.data.order,
+      });
+
+      return response.data;
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        isPaymentProcessing: false,
+        error: error.response?.data?.message || "Failed to capture payment",
+      });
+      throw error;
+    }
+  },
+
   updateOrderStatus: async (orderId, status) => {
     set({ isLoading: true, error: null });
     try {
@@ -98,11 +92,13 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return true;
     } catch (err: any) {
       const message =
-        err.response.data.message ??  "Failed to update the order status of product";
+        err.response.data.message ??
+        "Failed to update the order status of product";
       set({ error: message, isLoading: false });
       return false;
     }
   },
+
   getAllOrders: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -117,6 +113,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return null;
     }
   },
+
   getOrdersByUserId: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -131,7 +128,9 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return null;
     }
   },
+
   setCurrentOrder: (order) => set({ currentOrder: order }),
+
   getOrder: async (orderId) => {
     set({ isLoading: true, error: null });
     try {
