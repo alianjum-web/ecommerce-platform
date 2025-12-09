@@ -1,3 +1,4 @@
+// components/user/checkout/PaymentFlow.tsx
 import { ArrowRight, Badge, BadgeCheck, Clock, CreditCard, Loader2, Lock, Mail, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayPalButtons } from "@paypal/react-paypal-js";
@@ -17,7 +18,7 @@ export function PaymentFlow({
   isProcessing,
 }: PaymentFlowProps) {
 
-const { toast } = useToast();
+  const { toast } = useToast();
 
   return (
     <Card className="glass-effect border border-glass-border">
@@ -102,30 +103,31 @@ const { toast } = useToast();
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="space-y-4">
-              <Label
-                htmlFor="checkout-email"
-                className="flex items-center gap-2"
-              >
-                <Mail className="h-4 w-4" />
-                Email Address
-              </Label>
-              <div className="relative">
-                <Input
-                  id="checkout-email"
-                  type="email"
-                  placeholder="Enter your email to continue"
-                  value={checkoutEmail}
-                  onChange={(e) => onEmailChange(e.target.value)}
-                  className="pl-10 bg-input border-border"
+              <div className="space-y-4">
+                <Label
+                  htmlFor="checkout-email"
+                  className="flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4" />
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="checkout-email"
+                    type="email"
+                    placeholder="Enter your email to continue"
+                    value={checkoutEmail}
+                    onChange={(e) => onEmailChange(e.target.value)}
+                    className="pl-10 bg-input border-border"
                   required
-                />
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  We'll send your order confirmation and updates to this email
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                We'll send your order confirmation and updates to this email
-              </p>
-            </div>
+            )
 
             <Button
               onClick={onProceedToPayment}
