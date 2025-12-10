@@ -1,4 +1,6 @@
+// components/user/checkout/OrderSummary.tsx
 import { Coupon } from "@/types/checkout/Coupon";
+import { CartItemWithProduct } from "@/types/checkout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,8 +8,19 @@ import { AlertCircle, CheckCircle, Gift, Package, Percent, Shield, ShoppingBag, 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { OrderSummaryProps } from "@/types/order/OrderSummaryProps";
 
+export interface OrderSummaryProps {
+  cartItems: CartItemWithProduct[];
+  subtotal: number;
+  discountAmount: number;
+  total: number;
+  couponCode: string;
+  appliedCoupon: Coupon | null;
+  couponError: string;
+  onCouponChange: (code: string) => void;
+  onApplyCoupon: () => void;
+  isCheckoutReady?: boolean;
+}
 
 export function OrderSummary({ 
   cartItems, 
@@ -18,7 +31,8 @@ export function OrderSummary({
   appliedCoupon, 
   couponError,
   onCouponChange,
-  onApplyCoupon 
+  onApplyCoupon,
+  isCheckoutReady = true
 }: OrderSummaryProps) {
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const shipping = subtotal > 50 ? 0 : 9.99;
@@ -43,11 +57,17 @@ export function OrderSummary({
             <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg bg-card">
               <div className="relative">
                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10">
-                  <img
-                    src={item.product?.images?.[0] || '/placeholder.jpg'}
-                    alt={item.product?.name}
-                    className="w-full h-full object-cover"
-                  />
+                  {item.product.images?.[0] ? (
+                    <img
+                      src={item.product.images[0]}
+                      alt={item.product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
                 {item.quantity > 1 && (
                   <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground">
@@ -58,7 +78,7 @@ export function OrderSummary({
               
               <div className="flex-1 min-w-0">
                 <h4 className="font-medium text-foreground truncate">
-                  {item.product?.name}
+                  {item.product.name}
                 </h4>
                 <div className="flex items-center gap-2 mt-1">
                   {item.color && (
@@ -79,10 +99,10 @@ export function OrderSummary({
               
               <div className="text-right">
                 <p className="font-bold text-primary">
-                  ${(item.product?.price * item.quantity).toFixed(2)}
+                  ${(item.product.price * item.quantity).toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  ${item.product?.price?.toFixed(2)} each
+                  ${item.product.price.toFixed(2)} each
                 </p>
               </div>
             </div>
@@ -101,11 +121,13 @@ export function OrderSummary({
               value={couponCode}
               onChange={(e) => onCouponChange(e.target.value)}
               className="bg-input border-border"
+              disabled={!isCheckoutReady}
             />
             <Button 
               onClick={onApplyCoupon} 
               variant="outline" 
               className="border-border hover:border-primary"
+              disabled={!isCheckoutReady}
             >
               Apply
             </Button>
