@@ -19,7 +19,7 @@ export function PaymentMethods({
     {
       id: "PAYPAL" as const,
       name: "PayPal",
-      icon: "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg",
+      icon: "/paypal-logo.png",
       description: "Pay with PayPal account or card",
       badge: "Fast & Secure",
       recommended: true,
@@ -27,7 +27,7 @@ export function PaymentMethods({
     {
       id: "STRIPE" as const,
       name: "Credit/Debit Card",
-      icon: "https://b.stripecdn.com/site-srv/assets/img/v3/jobs_v2/thumbnails/stripe-7f0a5c8e5f3bd9b4c7f8e5b5c5c5c5c.png",
+      icon: "/stripe-logo.png",
       description: "Visa, Mastercard, American Express",
       badge: "3D Secure",
       recommended: false,
@@ -101,19 +101,25 @@ export function PaymentMethods({
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
-                      {option.icon.startsWith("http") ? (
-                        <img
-                          src={option.icon}
-                          alt={option.name}
-                          className="h-8 w-12 object-contain rounded"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                            (e.target as HTMLImageElement).parentElement!.innerHTML = 
-                              `<div class="h-8 w-12 bg-muted rounded flex items-center justify-center">
-                                 <CreditCard className="h-5 w-5" />
-                               </div>`;
-                          }}
-                        />
+                      {option.icon.startsWith("/") ? (
+                        <div className="h-8 w-12 flex items-center justify-center bg-white rounded border">
+                          <img
+                            src={option.icon}
+                            alt={option.name}
+                            className="h-6 w-10 object-contain"
+                            onError={(e) => {
+                              // Fallback if image doesn't load
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div class="h-8 w-12 rounded bg-muted flex items-center justify-center">
+                                    <CreditCard class="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                `;
+                              }
+                            }}
+                          />
+                        </div>
                       ) : (
                         <span className="text-2xl">{option.icon}</span>
                       )}
