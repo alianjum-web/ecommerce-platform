@@ -12,7 +12,7 @@ export interface CartItem {
   color: string;
   size: string;
   quantity: number;
-  category?: string; 
+  category?: string;
 }
 
 interface CartStore {
@@ -50,17 +50,34 @@ export const useCartStore = create<CartStore>((set, get) => {
     isLoading: false,
     error: null,
 
-    fetchCart: async () => {
-      set({ isLoading: true, error: null });
-      try {
+// Update the fetchCart function:
+fetchCart: async () => {
+  set({ isLoading: true, error: null });
+  try {
+        console.log("🛒 [DEBUG] Starting fetchCart...");
+
         // ✅ Log the exact URL construction
         const baseUrl = API_ROUTES.CART;
         const fullUrl = `${baseUrl}/fetch-cart`;
 
+        console.log("🔗 [DEBUG] URL Breakdown:", {
+          baseUrl,
+          fullUrl,
+          NODE_ENV: process.env.NODE_ENV,
+          API_BASE_URL: process.env.NEXT_PUBLIC_API_URL,
+        });
+
+        // ✅ Test if the route exists with a simple fetch first
+        console.log("🧪 [DEBUG] Testing route existence...");
         try {
           const testResponse = await fetch(fullUrl, {
             method: "GET",
             credentials: "include",
+          });
+          console.log("🧪 [DEBUG] Route test result:", {
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            ok: testResponse.ok,
           });
         } catch (testError) {
           console.log("🧪 [DEBUG] Route test failed:", testError);
@@ -68,22 +85,22 @@ export const useCartStore = create<CartStore>((set, get) => {
 
         // ✅ Now try the actual axios call
 
-        const response = await axios.get(fullUrl, {
-          withCredentials: true,
-          timeout: 10000,
+    const response = await axios.get(fullUrl, {
+      withCredentials: true,
+      timeout: 10000,
           // ✅ Add headers for better debugging
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
         const cartItems = response.data.data || response.data.items || [];
 
-        set({
+    set({
           items: cartItems,
-          isLoading: false,
-        });
-      } catch (error: any) {
+      isLoading: false,
+    });
+  } catch (error: any) {
         console.error("❌ [DEBUG] fetchCart failed completely:", error);
 
         const errorDetails = {
@@ -99,12 +116,13 @@ export const useCartStore = create<CartStore>((set, get) => {
 
         console.log("🔍 [DEBUG] Complete error details:", errorDetails);
 
-        set({
+    set({
           error: `Cart fetch failed: ${error.response?.status} ${error.response?.statusText}`,
-          isLoading: false,
-        });
-      }
-    },
+      isLoading: false,
+      items: [], // Reset to empty array on error
+    });
+  }
+},
 
     addToCart: async (item) => {
       set({ isLoading: true, error: null });
@@ -165,7 +183,6 @@ export const useCartStore = create<CartStore>((set, get) => {
     clearCart: async () => {
       set({ isLoading: true, error: null });
       try {
-
         await axios.post(
           `${API_ROUTES.CART}/clear-cart`,
           {},
