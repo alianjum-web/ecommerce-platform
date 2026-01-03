@@ -162,7 +162,7 @@ const deleteAddress = async (
   try {
     const { id } = req.params;
  const userId = req.user?.userId;
-  // const userId = typeof rawUserId === "string" ? parseInt(rawUserId, 10) : rawUserId;
+
     if (!userId) {
       res.status(401).json({
         success: false,
