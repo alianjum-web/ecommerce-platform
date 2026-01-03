@@ -60,15 +60,6 @@ export const useCartStore = create<CartStore>((set, get) => {
         const baseUrl = API_ROUTES.CART;
         const fullUrl = `${baseUrl}/fetch-cart`;
 
-        console.log("🔗 [DEBUG] URL Breakdown:", {
-          baseUrl,
-          fullUrl,
-          NODE_ENV: process.env.NODE_ENV,
-          API_BASE_URL: process.env.NEXT_PUBLIC_API_URL,
-        });
-
-        // ✅ Test if the route exists with a simple fetch first
-        console.log("🧪 [DEBUG] Testing route existence...");
         try {
           const testResponse = await fetch(fullUrl, {
             method: "GET",
@@ -94,7 +85,7 @@ export const useCartStore = create<CartStore>((set, get) => {
           },
         });
 
-        const cartItems = response.data.data || response.data.items || [];
+        const cartItems = response.data.data.items || [];
 
         set({
           items: cartItems,
