@@ -1,132 +1,161 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CreditCard, Gift, Package, Shield, ShoppingBag, ShoppingCart, Truck } from "lucide-react";
+import { Row } from "@/components/ui/row";
+import {
+  ArrowRight,
+  CreditCard,
+  Gift,
+  Package,
+  Shield,
+  ShoppingBag,
+  ShoppingCart,
+  Truck
+} from "lucide-react";
 import type { CartSummaryProps } from "@/types/cart/CartSummaryProps";
 
-export function CartSummary({ 
-  subtotal, 
-  shipping, 
-  tax, 
-  total, 
+const TAX_RATE = 0.0889;
+const DISCOUNT_THRESHOLD = 100;
+const FREE_SHIPPING_THRESHOLD = 100;
+const SHIPPING_FEE = 9.99;
+
+export function CartSummary({
+  subtotal,
   itemCount,
-  onCheckout, 
-  onContinueShopping 
+  onCheckout,
+  onContinueShopping
 }: CartSummaryProps) {
-  const discount = subtotal > 100 ? subtotal * 0.1 : 0; // 10% discount for orders over $100
-  
+
+  const discount =
+    subtotal >= DISCOUNT_THRESHOLD ? subtotal * 0.1 : 0;
+
+  const discountedSubtotal = subtotal - discount;
+
+  const shipping =
+    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+  const tax = discountedSubtotal * TAX_RATE;
+
+  // 4️⃣ Final total
+  const total = discountedSubtotal + shipping + tax;
+
   return (
     <Card className="glass-effect border border-glass-border sticky top-8">
       <CardContent className="p-6">
+        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
             <ShoppingCart className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-foreground">Order Summary</h3>
-            <p className="text-sm text-muted-foreground">{itemCount} items in cart</p>
+            <h3 className="text-xl font-bold">Order Summary</h3>
+            <p className="text-sm text-muted-foreground">
+              {itemCount} items in cart
+            </p>
           </div>
         </div>
 
-        {/* Summary Details */}
+        {/* Pricing */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-medium">${subtotal.toFixed(2)}</span>
-          </div>
-          
+          <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+
           {discount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-success flex items-center gap-1">
-                <Gift className="h-4 w-4" />
-                Discount (10%)
-              </span>
-              <span className="font-medium text-success">-${discount.toFixed(2)}</span>
-            </div>
+            <>
+              <Row
+                label={
+                  <span className="flex items-center gap-1 text-success">
+                    <Gift className="h-4 w-4" />
+                    Discount (10%)
+                  </span>
+                }
+                value={`- $${discount.toFixed(2)}`}
+                success
+              />
+              <Row
+                label="Discounted Subtotal"
+                value={`$${discountedSubtotal.toFixed(2)}`}
+              />
+            </>
           )}
-          
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Shipping</span>
-            <span className="font-medium">
-              {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+
+          <Row
+            label="Shipping"
+            value={shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+          />
+
+          <Row
+            label={
+              <span>
+                Estimated Tax
+                <span className="block text-xs opacity-70">
+                  calculated after discount
+                </span>
+              </span>
+            }
+            value={`$${tax.toFixed(2)}`}
+          />
+
+          <div className="h-px bg-border my-2" />
+
+          <div className="flex justify-between text-lg font-bold">
+            <span>Total</span>
+            <span className="text-2xl text-primary">
+              ${total.toFixed(2)}
             </span>
           </div>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Estimated Tax</span>
-            <span className="font-medium">${tax.toFixed(2)}</span>
-          </div>
-          
-          <div className="h-px bg-border my-2" />
-          
-          <div className="flex items-center justify-between text-lg font-bold">
-            <span className="text-foreground">Total</span>
-            <span className="text-2xl text-primary">${total.toFixed(2)}</span>
-          </div>
         </div>
 
-        {/* Progress to Free Shipping */}
-        {subtotal < 100 && (
-          <div className="mt-6 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">
-                Free shipping on orders over $100
-              </span>
-              <span className="text-sm text-primary">
-                ${(100 - subtotal).toFixed(2)} away
+        {/* Free shipping progress */}
+        {subtotal < FREE_SHIPPING_THRESHOLD && (
+          <div className="mt-6 p-3 rounded-lg border border-primary/20">
+            <div className="flex justify-between text-sm">
+              <span>Free shipping on orders over $100</span>
+              <span className="text-primary">
+                ${(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(2)} away
               </span>
             </div>
-            <div className="h-2 bg-card rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500"
-                style={{ width: `${(subtotal / 100) * 100}%` }}
+            <div className="h-2 bg-card rounded-full mt-2 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-secondary"
+                style={{
+                  width: `${(subtotal / FREE_SHIPPING_THRESHOLD) * 100}%`
+                }}
               />
             </div>
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="space-y-3 mt-6">
-          <Button
-            onClick={onCheckout}
-            className="w-full py-6 text-lg font-semibold rounded-xl transition-all duration-300"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Proceed to Checkout
-              <ArrowRight className="h-5 w-5" />
-            </div>
+          <Button onClick={onCheckout} className="w-full py-6 text-lg">
+            <CreditCard className="h-5 w-5 mr-2" />
+            Proceed to Checkout
+            <ArrowRight className="h-5 w-5 ml-2" />
           </Button>
-          
-          <Button
-            onClick={onContinueShopping}
-            variant="outline"
-            className="w-full border-border hover:border-primary"
-          >
+
+          <Button variant="outline" onClick={onContinueShopping} className="w-full">
             <ShoppingBag className="h-4 w-4 mr-2" />
             Continue Shopping
           </Button>
         </div>
 
-        {/* Security Badges */}
-        <div className="mt-6 pt-6 border-t border-border">
-          <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Shield className="h-3 w-3" />
-              Secure Payment
-            </div>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Package className="h-3 w-3" />
-              Free Returns
-            </div>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Truck className="h-3 w-3" />
-              Fast Shipping
-            </div>
-          </div>
+        {/* Trust badges */}
+        <div className="mt-6 pt-6 border-t flex justify-center gap-4 text-xs">
+          <Badge icon={Shield} text="Secure Payment" />
+          <Badge icon={Package} text="Free Returns" />
+          <Badge icon={Truck} text="Fast Shipping" />
         </div>
+
       </CardContent>
     </Card>
+  );
+}
+
+
+function Badge({ icon: Icon, text }: any) {
+  return (
+    <div className="flex items-center gap-1">
+      <Icon className="h-3 w-3" />
+      {text}
+    </div>
   );
 }
