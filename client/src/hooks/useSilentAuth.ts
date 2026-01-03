@@ -14,18 +14,15 @@ export default function useSilentAuth() {
 
   const calculateRefreshTime = useCallback(async (): Promise<number | null> => {
     try {
-      // ✅ Check session FIRST
       const sessionInfo = await checkSession();
 
-      // ✅ CRITICAL: If no access token but have refresh token, refresh NOW
       if (sessionInfo.hasRefreshToken && !sessionInfo.hasAccessToken) {
         authLogger.warn(
           "Missing access token but have refresh token - refreshing immediately"
         );
-        return 0; // Refresh immediately
+        return 0;
       }
 
-      // ✅ Then check expiry info
       const expiryInfo = getTokenExpiryInfo();
 
       if (expiryInfo) {
@@ -43,9 +40,8 @@ export default function useSilentAuth() {
         }
       }
 
-      // If no stored info but we have refresh token, use default
       if (sessionInfo?.hasRefreshToken) {
-        const DEFAULT_REFRESH_TIME = 12 * 60 * 1000; // 12 minutes
+        const DEFAULT_REFRESH_TIME = 12 * 60 * 1000;
         authLogger.info("Using default refresh time", {
           defaultTime: "12 minutes",
         });
@@ -56,7 +52,7 @@ export default function useSilentAuth() {
       return null;
     } catch (error) {
       authLogger.error("Failed to calculate refresh time", error);
-      return 10 * 60 * 1000; // Fallback
+      return null;
     }
   }, [checkSession, getTokenExpiryInfo]);
 
@@ -74,21 +70,18 @@ export default function useSilentAuth() {
         return;
       }
 
-      // Clear existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
         authLogger.debug("Cleared existing refresh timeout");
       }
 
-      // If refresh time is 0, refresh immediately
       if (refreshTime <= 0) {
         authLogger.info("Immediate token refresh required");
         await performTokenRefresh();
         return;
       }
 
-      // Schedule future refresh
       authLogger.info(`Scheduled next token refresh`, {
         refreshInMinutes: Math.round(refreshTime / 60000),
         refreshInSeconds: Math.round(refreshTime / 1000),
@@ -145,7 +138,7 @@ export default function useSilentAuth() {
         const backoffTime = Math.min(
           1000 * Math.pow(2, retryCountRef.current),
           30000
-        ); // Max 30 seconds
+        ); // max 30s
 
         authLogger.info(`Scheduling retry with exponential backoff`, {
           backoffSeconds: Math.round(backoffTime / 1000),
@@ -237,18 +230,15 @@ export default function useSilentAuth() {
   useEffect(() => {
     authLogger.info("useSilentAuth hook initialized");
 
-    // ✅ Initial check with 2 second delay to ensure everything is loaded
     setTimeout(() => {
       checkAndRefreshIfNeeded();
     }, 2000);
 
-    // ✅ More frequent safety check (every 2 minutes instead of 5)
     intervalRef.current = setInterval(() => {
       authLogger.debug("Performing scheduled token health check");
       checkAndRefreshIfNeeded();
-    }, 2 * 60 * 1000);
+    }, 3 * 60 * 1000);
 
-    // Refresh when tab becomes visible (if needed)
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         authLogger.debug("Tab became visible, checking token status");
@@ -292,5 +282,5 @@ export default function useSilentAuth() {
     };
   }, [checkAndRefreshIfNeeded]);
 
-  return null; // This is a hook, doesn't render anything
+  return null;
 }
