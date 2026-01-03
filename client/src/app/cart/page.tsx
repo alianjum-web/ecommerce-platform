@@ -83,7 +83,7 @@ function UserCartPage() {
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.08; // 8% tax
+  const tax = subtotal * 0.0889;; // 8% tax
   const total = subtotal + shipping + tax;
 
   if (!isMounted || isLoading) {
@@ -216,9 +216,9 @@ function UserCartPage() {
             <div className="lg:w-96">
               <CartSummary
                 subtotal={subtotal}
-                shipping={shipping}
-                tax={tax}
-                total={total}
+                // shipping={shipping}
+                // tax={tax}
+                // total={total}
                 itemCount={itemCount}
                 onCheckout={() => router.push("/checkout")}
                 onContinueShopping={() => router.push("/listing")}
