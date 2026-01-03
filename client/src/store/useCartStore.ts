@@ -2,19 +2,7 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
-
-export interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  image: string;
-  color: string;
-  size: string;
-  quantity: number;
-  category?: string;
-}
-
+import { CartItem } from "@/types/cart/cartItemStore";
 interface CartStore {
   items: CartItem[];
   isLoading: boolean;
