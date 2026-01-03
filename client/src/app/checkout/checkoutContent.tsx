@@ -14,8 +14,7 @@ import type {
 
 // Import your existing interfaces
 import type { Product, ProductFilters } from "@/types/product";
-import type { CartItem } from "@/store/useCartStore";
-
+import type { CartItem } from "@/types/cart/cartItemStore";
 // Store hooks (keep as is)
 import { useAddressStore } from "@/store/useAddressStore";
 import { useAuthStore } from "@/store/useAuthStore";
