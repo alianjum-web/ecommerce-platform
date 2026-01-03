@@ -4,3 +4,4 @@ export interface CartItemProps {
   onRemove: (id: string) => Promise<void>;
   isUpdating: boolean;
 }
+
