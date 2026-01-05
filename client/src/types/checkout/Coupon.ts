@@ -1,3 +1,4 @@
+// types/checkout/Coupon.ts
 export interface Coupon {
   id: string;
   code: string;
@@ -6,4 +7,10 @@ export interface Coupon {
   endDate: string;
   usageLimit: number;
   usageCount: number;
+  // Add these missing properties
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  maxDiscount?: number;
+  minOrderValue?: number;
 }
