@@ -1,21 +1,21 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Suspense } from "react";
-import CheckoutContent from "./checkoutContent";
+// import { Skeleton } from "@/components/ui/skeleton";
+// import { Suspense } from "react";
+// import CheckoutContent from "./checkoutContent";
 
-function CheckoutSkeleton() {
-  return (
-    <div>
-      <Skeleton />
-    </div>
-  );
-}
+// function CheckoutSkeleton() {
+//   return (
+//     <div>
+//       <Skeleton />
+//     </div>
+//   );
+// }
 
-function CheckoutSuspense() {
-  return (
-    <Suspense fallback={<CheckoutSkeleton />}>
-      <CheckoutContent />
-    </Suspense>
-  );
-}
+// function CheckoutSuspense() {
+//   return (
+//     <Suspense fallback={<CheckoutSkeleton />}>
+//       <CheckoutContent />
+//     </Suspense>
+//   );
+// }
 
-export default CheckoutSuspense;
+// export default CheckoutSuspense;
