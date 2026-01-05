@@ -184,8 +184,8 @@ function PayPalProviderWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 4. Dynamic Checkout Content Import
-const CheckoutContent = dynamic(() => import("@/app/checkout/checkoutContent"), {
+// 4. Dynamic Checkout Content Import - UPDATED PATH
+const CheckoutContent = dynamic(() => import("@/components/user/checkout/CheckoutComponent"), {
   ssr: false,
   loading: () => <FuturisticCheckoutLoader />,
 });
