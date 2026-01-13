@@ -18,16 +18,20 @@ import {
   RefreshCw,
   Heart,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  CreditCard,
+  ArrowRight,
+  ShoppingBag
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CartItem } from "@/components/user/cart/CartItem";
-// import { CartSummary } from "@/components/user/cart/CartSummary";
+import { CartSummary } from "@/components/user/cart/CartSummary";
 import { CartLoadingSkeleton } from "@/components/user/cart/CartLoadingSkeleton";
 import { CartEmptyState } from "@/components/user/cart/CartEmptyState";
+import { CartRedirect } from "@/components/user/cart/CartRedirect";
 
 function getCartItems(items: any): any[] {
   if (Array.isArray(items)) return items;
@@ -171,7 +175,15 @@ function UserCartPage() {
                     isUpdating={isUpdating}
                   />
                 ))}
+                <CartRedirect 
+                  onCheckout={() => router.push('/checkout')}
+                  onContinueShopping={() => router.push('/listing')}
+                />
               </div>
+
+       {/* Actions */}
+      
+
 
               {/* Cart Actions */}
               <Card className="glass-effect border border-glass-border">
@@ -244,7 +256,7 @@ function UserCartPage() {
               </Card>
 
               {/* Trust Badges */}
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              {/* <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="text-xs text-muted-foreground">30-Day Returns</span>
@@ -261,7 +273,7 @@ function UserCartPage() {
                   <Sparkles className="h-4 w-4 text-accent" />
                   <span className="text-xs text-muted-foreground">Quality Guarantee</span>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
