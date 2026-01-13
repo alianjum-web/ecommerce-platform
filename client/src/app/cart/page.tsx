@@ -25,7 +25,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CartItem } from "@/components/user/cart/CartItem";
-import { CartSummary } from "@/components/user/cart/CartSummary";
+// import { CartSummary } from "@/components/user/cart/CartSummary";
 import { CartLoadingSkeleton } from "@/components/user/cart/CartLoadingSkeleton";
 import { CartEmptyState } from "@/components/user/cart/CartEmptyState";
 
@@ -214,7 +214,7 @@ function UserCartPage() {
 
             {/* Cart Summary */}
             <div className="lg:w-96">
-              <CartSummary
+              {/* <CartSummary
                 subtotal={subtotal}
                 // shipping={shipping}
                 // tax={tax}
@@ -222,7 +222,7 @@ function UserCartPage() {
                 itemCount={itemCount}
                 onCheckout={() => router.push("/checkout")}
                 onContinueShopping={() => router.push("/listing")}
-              />
+              /> */}
 
               {/* Promo Code */}
               <Card className="mt-4 glass-effect border border-glass-border">
