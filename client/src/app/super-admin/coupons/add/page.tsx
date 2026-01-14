@@ -561,6 +561,9 @@ function SuperAdminManageCouponsPage() {
       ...formData,
       discountPercent: parseFloat(formData.discountPercent.toString()),
       usageLimit: parseInt(formData.usageLimit.toString()) || 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const result = await createCoupon(couponData);
