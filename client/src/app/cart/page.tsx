@@ -156,7 +156,7 @@ function UserCartPage() {
                   Your Items ({itemCount})
                 </h2>
                 <Button
-                  onClick={() => router.push("/listing")}
+                  onClick={() => router.push("/products")}
                   variant="ghost"
                   className="text-primary hover:text-primary-light"
                 >
@@ -186,7 +186,7 @@ function UserCartPage() {
 
 
               {/* Cart Actions */}
-              <Card className="glass-effect border border-glass-border">
+              {/* <Card className="glass-effect border border-glass-border">
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -221,11 +221,11 @@ function UserCartPage() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </div>
 
             {/* Cart Summary */}
-            <div className="lg:w-96">
+            {/* <div className="lg:w-96"> */}
               {/* <CartSummary
                 subtotal={subtotal}
                 // shipping={shipping}
@@ -237,7 +237,7 @@ function UserCartPage() {
               /> */}
 
               {/* Promo Code */}
-              <Card className="mt-4 glass-effect border border-glass-border">
+              {/* <Card className="mt-4 glass-effect border border-glass-border">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Gift className="h-4 w-4 text-accent" />
@@ -253,11 +253,11 @@ function UserCartPage() {
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               {/* Trust Badges */}
               {/* <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-2">
+                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-1">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="text-xs text-muted-foreground">30-Day Returns</span>
                 </div>
@@ -275,7 +275,7 @@ function UserCartPage() {
                 </div>
               </div> */}
             </div>
-          </div>
+          // </div>
         )}
       </div>
     </div>
