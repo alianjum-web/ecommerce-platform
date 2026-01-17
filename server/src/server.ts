@@ -31,7 +31,7 @@ const corsOptions: cors.CorsOptions = {
       process.env.FRONTEND_URL,
       "http://localhost:3000",
       "http://localhost:3012",
-      "https://www.postman.com", // Add Postman for testing
+      "https://www.postman.com", // added postman for testing endpoints
       "https://postman.com"
     ];
 
