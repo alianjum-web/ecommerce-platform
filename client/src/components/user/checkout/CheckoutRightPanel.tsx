@@ -1,4 +1,4 @@
-import { OrderSummary } from "@/components/user/checkout/OrderSummary";
+import { OrderSummary } from "@/components/user/checkout/CheckoutOrderSummary";
 import { CartItemWithProduct } from "@/types/cart/cartItemStore";
 import type { Coupon } from "@/types/checkout/Coupon";
 

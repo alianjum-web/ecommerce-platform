@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-export interface OrderSummaryProps {
+export interface CheckoutOrderSummaryProps {
   cartItems: CartItemWithProduct[];
   subtotal: number;
   discountAmount: number;
-  total: number;
+  // total: number;
   couponCode: string;
   appliedCoupon: Coupon | null;
   couponError: string;
@@ -22,22 +22,37 @@ export interface OrderSummaryProps {
   isCheckoutReady?: boolean;
 }
 
+const TAX_RATE = 0.0889;
+const DISCOUNT_THRESHOLD = 100;
+const FREE_SHIPPING_THRESHOLD = 100;
+const SHIPPING_FEE = 9.99;
+
 export function OrderSummary({ 
   cartItems, 
   subtotal, 
-  discountAmount, 
-  total, 
+  discountAmount, // ?  
+  // total, // ?
   couponCode, 
   appliedCoupon, 
   couponError,
   onCouponChange,
   onApplyCoupon,
   isCheckoutReady = true
-}: OrderSummaryProps) {
+}: CheckoutOrderSummaryProps) {
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.08;
 
+   const discount =
+    subtotal >= DISCOUNT_THRESHOLD ? subtotal * 0.1 : 0;
+
+  const discountedSubtotal = subtotal - discount;
+
+  const shipping =
+    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+  const tax = discountedSubtotal * TAX_RATE;
+console.log("The tax is:", tax);
+  const total = discountedSubtotal + shipping + tax
+console.log(total);
   return (
     <Card className="glass-effect border border-glass-border sticky top-8">
       <CardContent className="p-6">
