@@ -6,7 +6,7 @@ interface CheckoutRightPanelProps {
   cartItems: CartItemWithProduct[];
   subtotal: number;
   discountAmount: number;
-  total: number;
+  // total: number;
   couponCode: string;
   appliedCoupon: Coupon | null;
   couponError: string;
@@ -19,7 +19,7 @@ export const CheckoutRightPanel = ({
   cartItems,
   subtotal,
   discountAmount,
-  total,
+  // total,
   couponCode,
   appliedCoupon,
   couponError,
@@ -32,7 +32,7 @@ export const CheckoutRightPanel = ({
       cartItems={cartItems}
       subtotal={subtotal}
       discountAmount={discountAmount}
-      total={total}
+      // total={total}
       couponCode={couponCode}
       appliedCoupon={appliedCoupon}
       couponError={couponError}
