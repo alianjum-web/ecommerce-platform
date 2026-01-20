@@ -5,7 +5,7 @@ export type CartData = CartItem[] | {
   validationIssues?: any[];
 };
 
-import type { CartItem } from "@/store/useCartStore";
+import type { CartItem } from "@/types/cart/cartItemStore";
 
 export const getCartItemsArray = (cartData: CartData | undefined | null): CartItem[] => {
   if (!cartData) return [];
