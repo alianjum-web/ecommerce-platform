@@ -8,8 +8,9 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["ES2020"]
+    "lib": ["ES2020"],
+    "resolveJsonModule": true
   },
   "include": ["src", "prisma", "types.d.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }

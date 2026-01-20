@@ -1,1 +1,68 @@
 # ecommerce-platform
+
+
+
+
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Ecommerce backend using Express, Prisma, and TypeScript",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "nodemon src/server.ts",
+    "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "npx prisma generate --schema=src/prisma/schema.prisma && tsc --skipLibCheck",
+    "start": "node dist/server.js",
+    "prisma:generate": "npx prisma generate --schema=src/prisma/schema.prisma",
+    "prisma:migrate:dev": "npx prisma migrate dev --schema=src/prisma/schema.prisma --name init",
+    "prisma:migrate:deploy": "npx prisma migrate deploy --schema=src/prisma/schema.prisma",
+    "prisma:seed": "ts-node src/prisma/seed.ts",
+    "render-build": "npm ci --include=dev && npx prisma generate --schema=src/prisma/schema.prisma && npm run build && npx prisma migrate deploy --schema=src/prisma/schema.prisma"
+  },
+  "prisma": {
+    "seed": "ts-node src/prisma/seed.ts",
+    "schema": "src/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/lodash": "^4.17.14",
+    "@types/multer": "^1.4.13",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pino": "^7.0.4",
+    "@types/uuid": "^10.0.0",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jose": "^5.9.6",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.10",
+    "pino": "^10.0.0",
+    "pino-pretty": "^13.1.2",
+    "stripe": "^20.0.0",
+    "uuid": "^11.0.5",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/stripe": "^8.0.416",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.19.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
