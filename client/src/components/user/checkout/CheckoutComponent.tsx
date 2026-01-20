@@ -131,7 +131,7 @@ export function CheckoutContent() {
               cartItems={cartItemsWithDetails}
               subtotal={subtotal}
               discountAmount={discountAmount}
-              // total={total}
+              total={total}
               couponCode={couponCode}
               appliedCoupon={appliedCoupon}
               couponError={couponError}

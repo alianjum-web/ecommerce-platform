@@ -13,7 +13,7 @@ export interface CheckoutOrderSummaryProps {
   cartItems: CartItemWithProduct[];
   subtotal: number;
   discountAmount: number;
-  // total: number;
+  total: number;
   couponCode: string;
   appliedCoupon: Coupon | null;
   couponError: string;
@@ -31,7 +31,7 @@ export function OrderSummary({
   cartItems, 
   subtotal, 
   discountAmount, // ?  
-  // total, // ?
+  total, // ?
   couponCode, 
   appliedCoupon, 
   couponError,
@@ -51,7 +51,7 @@ export function OrderSummary({
 
   const tax = discountedSubtotal * TAX_RATE;
 console.log("The tax is:", tax);
-  const total = discountedSubtotal + shipping + tax
+  // const total = discountedSubtotal + shipping + tax
 console.log(total);
   return (
     <Card className="glass-effect border border-glass-border sticky top-8">
