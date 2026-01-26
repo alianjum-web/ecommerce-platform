@@ -66,3 +66,8 @@
   "author": "",
   "license": "ISC"
 }
+
+"prisma": {
+    "seed": "ts-node src/prisma/seed.ts",
+    "schema": "src/prisma/schema.prisma"
+  },

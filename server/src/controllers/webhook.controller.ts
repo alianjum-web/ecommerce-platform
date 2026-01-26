@@ -1,6 +1,6 @@
 // controllers/payment/webhook.controller.ts
 import { Request, Response } from "express";
-import { prisma } from "../server";
+import { prisma } from "../lib/prisma";
 import { PaymentFactory } from "../services/payment/payment.factory";
 
 // Helper function to find order by different identifiers WITH relations

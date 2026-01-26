@@ -1,5 +1,5 @@
 // auth.controller.ts (suggested)
-import { prisma } from "../server";
+import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";

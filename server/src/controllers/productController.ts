@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../types/express";
 import cloudinary from "../config/cloudinary";
-import { prisma } from "../server";
+import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 import { asyncHandler } from "../utils/asyncHandler";
 import {

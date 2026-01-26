@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import cors from "cors";
@@ -13,6 +12,7 @@ import orderRoutes from "./routes/orderRoutes";
 import warmRoutes from "./routes/warm"
 import { ApiError } from "./utils/ApiError";
 import { errorHandler } from "./middleware/errHandler";
+import prisma from "./lib/prisma";
 
 // Load environment variables
 dotenv.config();
@@ -63,8 +63,7 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-
-export const prisma = new PrismaClient();
+export { prisma };
 
 // Routes
 app.use("/api/warm", warmRoutes);

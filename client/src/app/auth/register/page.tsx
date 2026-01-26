@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import banner from "../../../../public/images/banner2.jpg";
-import logo from "../../../../public/images/logo.avif";
+import logo from "../../../../public/images/logo.webp";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

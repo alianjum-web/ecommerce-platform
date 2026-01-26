@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../types/express";
-import { prisma } from "../server";
+import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError, ValidationError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";

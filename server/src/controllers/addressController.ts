@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../types/express";
-import { prisma } from "../server";
+import { prisma } from "../lib/prisma";
 
 const createAddress = async (
   req: AuthenticatedRequest,
