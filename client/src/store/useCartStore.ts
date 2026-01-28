@@ -67,7 +67,6 @@ export const useCartStore = create<CartStore>((set, get) => {
         const response = await axios.get(fullUrl, {
           withCredentials: true,
           timeout: 10000,
-          // ✅ Add headers for better debugging
           headers: {
             "Content-Type": "application/json",
           },
