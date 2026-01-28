@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { warmupService } from "@/utils/warmupService";
+// import { warmupService } from "@/utils/warmupService";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -180,14 +180,14 @@ function LoginPage() {
   useEffect(() => {
     setFocus("email");
     
-    const pre = async () => {
-      if (warmupService.shouldWarm()) {
-        setIsWarming(true);
-        await warmupService.warmBackend();
-        setIsWarming(false);
-      }
-    };
-    pre();
+    // const pre = async () => {
+    //   if (warmupService.shouldWarm()) {
+    //     setIsWarming(true);
+    //     await warmupService.warmBackend();
+    //     setIsWarming(false);
+    //   }
+    // };
+    // pre();
   }, [setFocus]);
 
   useEffect(() => {
@@ -204,11 +204,11 @@ function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      if (warmupService.shouldWarm()) {
-        setIsWarming(true);
-        await warmupService.ensureWarm();
-        setIsWarming(false);
-      }
+      // if (warmupService.shouldWarm()) {
+      //   setIsWarming(true);
+      //   await warmupService.ensureWarm();
+      //   setIsWarming(false);
+      // }
 
       const success = await login(data.email, data.password);
 

@@ -2,7 +2,7 @@
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { warmupService } from "@/utils/warmupService";
+// import { warmupService } from "@/utils/warmupService";
 import type { User } from "@/types/auth/User";
 import type { TokenExpiryInfoBackendRes } from "@/types/auth/TokenExpiryInfoFromBackend";
 import type { Session } from "@/types/auth/Session";
