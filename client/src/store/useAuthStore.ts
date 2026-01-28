@@ -149,7 +149,7 @@ export const useAuthStore = create<AuthStore>()(
             console.log("🔄 AuthStore: Login process started for:", email);
           }
 
-          await warmupService.ensureWarm();
+          // await warmupService.ensureWarm();
 
           const response = await axiosInstance.post("/login", {
             email,

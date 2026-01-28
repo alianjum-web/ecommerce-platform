@@ -61,7 +61,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import CommonLayout from "@/components/common/layout";
 import AuthProvider from "@/components/providers/AuthProvider";
-import { WarmupProvider } from "@/components/providers/warmUpProvider";
+// import { WarmupProvider } from "@/components/providers/warmUpProvider";
 import { CookieDebug } from "@/components/debug/CookieDebug";
 import ThemeInitializer from "@/components/layout/ThemeInitializer";
 
@@ -91,12 +91,12 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeInitializer />
         
-        <WarmupProvider>
+        {/* <WarmupProvider> */}
           <AuthProvider>
             <CommonLayout>{children}</CommonLayout>
             <CookieDebug />
           </AuthProvider>
-        </WarmupProvider>
+        {/* </WarmupProvider> */}
         <Toaster />
         
         {/* Performance monitoring script */}
