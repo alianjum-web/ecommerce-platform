@@ -7,7 +7,7 @@ const BACKEND_URL =
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!BACKEND_URL) {
     return NextResponse.json(
@@ -27,10 +27,11 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
 
     const backendRes = await fetch(
-      `${BACKEND_URL}/api/cart/update/${params.id}`,
+      `${BACKEND_URL}/api/cart/update/${id}`,
       {
         method: "PUT",
         headers: {

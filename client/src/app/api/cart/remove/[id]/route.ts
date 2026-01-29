@@ -7,7 +7,7 @@ const BACKEND_URL =
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Changed to Promise
 ) {
   if (!BACKEND_URL) {
     return NextResponse.json(
@@ -27,8 +27,11 @@ export async function DELETE(
       );
     }
 
+    // Await params
+    const { id } = await params;
+
     const backendRes = await fetch(
-      `${BACKEND_URL}/api/cart/remove/${params.id}`,
+      `${BACKEND_URL}/api/cart/remove/${id}`,
       {
         method: "DELETE",
         headers: {
