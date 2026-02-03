@@ -1,17 +1,7 @@
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
-
-export interface Address {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  country: string;
-  postalCode: string;
-  phone: string;
-  isDefault: boolean;
-}
+import type { Address } from "@/types/address/Address";
 
 interface AddressStore {
   addresses: Address[];
