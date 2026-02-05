@@ -3,10 +3,10 @@ import { authenticateJwt, isSuperAdmin } from "../middleware/authMiddleware";
 import {
   createPaymentOrder,
   capturePayment,
-  getAllOrdersForAdmin,
+  getAllOrdersAdminOnly,
   getOrder,
   getOrdersByUserId,
-  updateOrderStatus,
+  updateOrderStatusAdminOnly,
 } from "../controllers/orderController";
 import { ApiResponse } from "../utils/ApiResponse";
 import { PaymentFactory } from "../services/payment/payment.factory";
@@ -43,7 +43,7 @@ router.get('/methods', (req, res) => {
 // router.post("/create-final-order", createFinalOrderInDB);
 router.get("/get-single-order/:orderId", getOrder);
 router.get("/get-order-by-user-id", getOrdersByUserId);
-router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersForAdmin);
-router.put("/:orderId/status", isSuperAdmin, updateOrderStatus);
+router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersAdminOnly);
+router.put("/:orderId/status", isSuperAdmin, updateOrderStatusAdminOnly);
 
 export default router;

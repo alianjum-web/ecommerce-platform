@@ -3,7 +3,11 @@ import { NextFunction, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiResponse } from "../utils/ApiResponse";
-import { ApiError, InternalServerError, UnauthorizedError } from "../utils/ApiError";
+import {
+  ApiError,
+  InternalServerError,
+  UnauthorizedError,
+} from "../utils/ApiError";
 import { PaymentFactory } from "../services/payment/payment.factory";
 import { PaymentOrderData } from "../services/interfaces/payment.interface";
 import type { MinimalProduct } from "../services/interfaces/product";
@@ -20,7 +24,7 @@ async function updateStockAndClearCart(userId: string, items: any[]) {
           soldCount: { increment: item.quantity },
         },
       });
-       if (item.couponId) {
+      if (item.couponId) {
         await prisma.coupon.update({
           where: { id: item.couponId },
           data: {
@@ -36,9 +40,8 @@ async function updateStockAndClearCart(userId: string, items: any[]) {
     await prisma.cartItem.deleteMany({
       where: { cart: { userId } },
     });
-    
+
     await prisma.cart.delete({ where: { userId } });
-     
   } catch (error) {
     // Cart might not exist, that's okay
     console.log("Cart already cleared or doesn't exist");
@@ -63,12 +66,17 @@ const createPaymentOrder = asyncHandler(
       // 1. Validate payment method
       const availableMethods = PaymentFactory.getAvailableMethods();
       if (!availableMethods.includes(paymentMethod.toUpperCase())) {
-        return next(new ApiError(400, `Payment method '${paymentMethod}' is not supported`));
+        return next(
+          new ApiError(
+            400,
+            `Payment method '${paymentMethod}' is not supported`,
+          ),
+        );
       }
 
       const draftOrder = await prisma.order.create({
         data: {
-          userId, 
+          userId,
           addressId,
           couponId,
           total,
@@ -77,7 +85,7 @@ const createPaymentOrder = asyncHandler(
           paymentMethod: paymentMethod.toUpperCase() as any,
           paymentStatus: "PENDING",
           items: {
-            create: items.map((item: MinimalProduct)  => ({
+            create: items.map((item: MinimalProduct) => ({
               productId: item.productId,
               productName: item.productName,
               productCategory: item.productCategory,
@@ -85,14 +93,14 @@ const createPaymentOrder = asyncHandler(
               size: item.size,
               color: item.color,
               price: item.price,
-            }))
-          }
+            })),
+          },
         },
         include: {
           items: true,
           address: true,
-          coupon: true
-        }
+          coupon: true,
+        },
       });
 
       // FIXED: Use createPaymentService instead of createPaymentMethod
@@ -111,13 +119,18 @@ const createPaymentOrder = asyncHandler(
       if (!paymentResult.success) {
         await prisma.order.update({
           where: { id: draftOrder.id },
-          data: { 
+          data: {
             status: "PAYMENT_FAILED",
-            paymentStatus: "FAILED"
-          }
+            paymentStatus: "FAILED",
+          },
         });
-        
-        return next(new ApiError(400, paymentResult.error || "Payment order creation failed"));
+
+        return next(
+          new ApiError(
+            400,
+            paymentResult.error || "Payment order creation failed",
+          ),
+        );
       }
 
       // 4. Update order with provider info
@@ -125,7 +138,7 @@ const createPaymentOrder = asyncHandler(
         providerOrderId: paymentResult.orderId,
         paymentId: paymentResult.paymentId,
         status: "PENDING_PAYMENT",
-        paymentStatus: "PENDING"
+        paymentStatus: "PENDING",
       };
 
       // Add provider-specific fields
@@ -141,7 +154,7 @@ const createPaymentOrder = asyncHandler(
 
       await prisma.order.update({
         where: { id: draftOrder.id },
-        data: updateData
+        data: updateData,
       });
 
       // 5. Prepare response
@@ -164,17 +177,19 @@ const createPaymentOrder = asyncHandler(
         responseData.clientSecret = paymentResult.clientSecret;
       }
 
-      return res.status(200).json(
-        new ApiResponse(
-          200,
-          responseData,
-          `${paymentMethod} order created successfully`
-        )
-      );
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            responseData,
+            `${paymentMethod} order created successfully`,
+          ),
+        );
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 const capturePayment = asyncHandler(
@@ -197,22 +212,27 @@ const capturePayment = asyncHandler(
           id: internalOrderId,
           userId,
           status: "PENDING_PAYMENT",
-          paymentStatus: "PENDING"
+          paymentStatus: "PENDING",
         },
-        include: { items: true }
+        include: { items: true },
       });
 
       if (!existingOrder) {
-        return next(new ApiError(404, "Order not found or not in correct state"));
+        return next(
+          new ApiError(404, "Order not found or not in correct state"),
+        );
       }
 
       // 2. FIXED: Use createPaymentService instead of createPaymentMethod
       const paymentService = PaymentFactory.createPaymentService(paymentMethod);
-      
+
       // For card payments, pass cardData as second parameter
       let captureResult;
       if (paymentMethod.toUpperCase() === "CARD" && cardData) {
-        captureResult = await paymentService.capturePayment(paymentId, cardData);
+        captureResult = await paymentService.capturePayment(
+          paymentId,
+          cardData,
+        );
       } else {
         captureResult = await paymentService.capturePayment(paymentId);
       }
@@ -220,12 +240,14 @@ const capturePayment = asyncHandler(
       if (!captureResult.success) {
         await prisma.order.update({
           where: { id: internalOrderId },
-          data: { 
-            status: "CAPTURE_FAILED", 
-            paymentStatus: "FAILED" 
-          }
+          data: {
+            status: "CAPTURE_FAILED",
+            paymentStatus: "FAILED",
+          },
         });
-        return next(new ApiError(400, captureResult.error || "Payment capture failed"));
+        return next(
+          new ApiError(400, captureResult.error || "Payment capture failed"),
+        );
       }
 
       // 3. Update EXISTING order
@@ -236,13 +258,13 @@ const capturePayment = asyncHandler(
           paymentStatus: "COMPLETED",
           paymentId: captureResult.paymentId,
           providerCaptureId: captureResult.captureId || captureResult.data?.id,
-          capturedAt: new Date()
+          capturedAt: new Date(),
         },
         include: {
           items: true,
           address: true,
-          coupon: true
-        }
+          coupon: true,
+        },
       });
 
       // 4. Update stock and clear cart
@@ -263,13 +285,13 @@ const capturePayment = asyncHandler(
             order: updatedOrder,
             captureData: captureResult.data,
           },
-          "Payment captured and order completed successfully"
-        )
+          "Payment captured and order completed successfully",
+        ),
       );
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 const getOrder = asyncHandler(
@@ -297,12 +319,18 @@ const getOrder = asyncHandler(
     return res
       .status(200)
       .json(new ApiResponse(200, order, "orders fetched successfully"));
-  }
+  },
 );
 // TODO: should do it for single or multiple order? validate the input req.params+body
-const updateOrderStatus = asyncHandler(
+const updateOrderStatusAdminOnly = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(new UnauthorizedError("Unauthenticated user"));
+    }
+
     const { orderId } = req.params;
     const { status } = req.body;
 
@@ -319,17 +347,17 @@ const updateOrderStatus = asyncHandler(
       return res
         .status(401)
         .json(
-          new ApiError(401, "Error occured while updateing the order status")
+          new ApiError(401, "Error occured while updateing the order status"),
         );
     }
 
     return res
       .status(200)
       .json(new ApiResponse(200, statusUpdated, "stauts updated successfully"));
-  }
+  },
 );
 
-const getAllOrdersForAdmin = asyncHandler(
+const getAllOrdersAdminOnly = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
 
@@ -363,10 +391,10 @@ const getAllOrdersForAdmin = asyncHandler(
         new ApiResponse(
           200,
           orders,
-          "All orders fetched for the admin sucessfully."
-        )
+          "All orders fetched for the admin sucessfully.",
+        ),
       );
-  }
+  },
 );
 
 const getOrdersByUserId = asyncHandler(
@@ -398,16 +426,16 @@ const getOrdersByUserId = asyncHandler(
     return res
       .status(200)
       .json(
-        new ApiResponse(200, order, "Order fetched for the user succesfully")
+        new ApiResponse(200, order, "Order fetched for the user succesfully"),
       );
-  }
+  },
 );
 
 export {
   createPaymentOrder,
   capturePayment,
   getOrder,
-  updateOrderStatus,
-  getAllOrdersForAdmin,
+  updateOrderStatusAdminOnly,
+  getAllOrdersAdminOnly,
   getOrdersByUserId,
 };

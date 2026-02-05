@@ -99,7 +99,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     }
   },
 
-  getAllOrders: async () => {
+  getAllOrdersForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(

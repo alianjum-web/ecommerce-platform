@@ -82,7 +82,7 @@ export interface OrderStore {
     orderId: string,
     status: Order["status"]
   ) => Promise<boolean>;
-  getAllOrders: () => Promise<Order[] | null>;
+  getAllOrdersForAdmin: () => Promise<Order[] | null>;
   getOrdersByUserId: () => Promise<Order[] | null>;
   setCurrentOrder: (order: Order | null) => void;
 }
