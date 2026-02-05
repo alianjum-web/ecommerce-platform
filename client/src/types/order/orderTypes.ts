@@ -77,12 +77,12 @@ export interface OrderStore {
     internalOrderId: string;
     cardData?: any;
   }) => Promise<any>;
-  getOrder: (orderId: string) => Promise<Order | null>;
+  getOrderForUser: (orderId: string) => Promise<Order | null>;
   updateOrderStatus: (
     orderId: string,
     status: Order["status"]
   ) => Promise<boolean>;
   getAllOrdersForAdmin: () => Promise<Order[] | null>;
-  getOrdersByUserId: () => Promise<Order[] | null>;
+  getOrderForAdmin: (orderId: string) => Promise<Order | null>;
   setCurrentOrder: (order: Order | null) => void;
 }

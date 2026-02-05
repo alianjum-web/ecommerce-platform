@@ -4,9 +4,10 @@ import {
   createPaymentOrder,
   capturePayment,
   getAllOrdersAdminOnly,
-  getOrderById,
-  getOrderByIdWithUserAdminOnly,
+  // getOrder,
+  // getOrdersByUserId,
   updateOrderStatusAdminOnly,
+  getOrderById,
 } from "../controllers/orderController";
 import { ApiResponse } from "../utils/ApiResponse";
 import { PaymentFactory } from "../services/payment/payment.factory";
@@ -41,9 +42,12 @@ router.get('/methods', (req, res) => {
 });
 
 // router.post("/create-final-order", createFinalOrderInDB);
-router.get("/get-order/:orderId", getOrderById);
-router.get("/get-order-with-user/:orderId", isSuperAdmin, getOrderByIdWithUserAdminOnly);
+// router.get("/get-single-order/:orderId", getOrder);
+// router.get("/get-order-by-user-id", getOrdersByUserId);
 router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersAdminOnly);
 router.put("/:orderId/status", isSuperAdmin, updateOrderStatusAdminOnly);
 
+
+router.get("/:orderId", getOrderById); // For users
+router.get("/admin/:orderId", isSuperAdmin, getOrderById); // Same controller works for both
 export default router;

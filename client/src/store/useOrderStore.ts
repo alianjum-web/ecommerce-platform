@@ -62,7 +62,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       throw error;
     }
   },
-
+// admin
   updateOrderStatus: async (orderId, status) => {
     set({ isLoading: true, error: null });
     try {
@@ -98,7 +98,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return false;
     }
   },
-
+// admin
   getAllOrdersForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -113,15 +113,34 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return null;
     }
   },
+  
+  setCurrentOrder: (order) => set({ currentOrder: order }),
+  
 
-  getOrdersByUserId: async () => {
+  
+  getAllOrders: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/get-order-by-user-id`,
+        `${API_ROUTES.ORDER}/get-all-orders`,
         { withCredentials: true }
       );
       set({ isLoading: false, userOrders: response.data });
+      return response.data;
+    } catch (error) {
+      set({ error: "Failed to fetch all orders", isLoading: false });
+      return null;
+    }
+  },
+
+  getOrderForUser: async (orderId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(
+        `${API_ROUTES.ORDER}/${orderId}`,
+        { withCredentials: true }
+      );
+      set({ isLoading: false, currentOrder: response.data });
       return response.data;
     } catch (error) {
       set({ error: "Failed to fetch all orders for admin", isLoading: false });
@@ -129,19 +148,17 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     }
   },
 
-  setCurrentOrder: (order) => set({ currentOrder: order }),
-
-  getOrder: async (orderId) => {
+  getOrderForAdmin: async (orderId: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/get-single-order/${orderId}`,
+        `${API_ROUTES.ORDER}/admin/${orderId}`,
         { withCredentials: true }
       );
       set({ isLoading: false, currentOrder: response.data });
       return response.data;
     } catch (error) {
-      set({ error: "Failed to fetch all orders for admin", isLoading: false });
+      set({ error: "Failed to fetch order", isLoading: false });
       return null;
     }
   },

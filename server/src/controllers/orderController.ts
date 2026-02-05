@@ -294,33 +294,33 @@ const capturePayment = asyncHandler(
   },
 );
 
-const getOrderById = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const userId = req.user?.userId;
-    const { orderId } = req.params;
+// const getOrder = asyncHandler(
+//   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//     const userId = req.user?.userId;
+//     const { orderId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json(new ApiError(401, "Unauthenticated user"));
-    }
-    //  TODO: check the input by zod
+//     if (!userId) {
+//       return res.status(401).json(new ApiError(401, "Unauthenticated user"));
+//     }
+//     //  TODO: check the input by zod
 
-    const order = await prisma.order.findFirst({
-      where: {
-        id: orderId,
-        userId,
-      },
-      select: {
-        items: true,
-        address: true,
-        coupon: true,
-      },
-    });
+//     const order = await prisma.order.findFirst({
+//       where: {
+//         id: orderId,
+//         userId,
+//       },
+//       select: {
+//         items: true,
+//         address: true,
+//         coupon: true,
+//       },
+//     });
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, order, "orders fetched successfully"));
-  },
-);
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(200, order, "orders fetched successfully"));
+//   },
+// );
 // TODO: should do it for single or multiple order? validate the input req.params+body
 const updateOrderStatusAdminOnly = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -397,45 +397,89 @@ const getAllOrdersAdminOnly = asyncHandler(
   },
 );
 
-const getOrderByIdWithUserAdminOnly = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json(new ApiResponse(401, "Unauthenticated user"));
-    }
-    const { orderId } = req.params;
+// const getOrdersByUserId = asyncHandler(
+//   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//     const userId = req.user?.userId;
+//     if (!userId) {
+//       return res.status(401).json(new ApiResponse(401, "Unauthenticated user"));
+//     }
+//     const { orderId } = req.params;
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId, userId: userId }, // users see it's own orders
-      include: {
-        items: true,
-        address: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+//     const order = await prisma.order.findUnique({
+//       where: { id: orderId, userId: userId }, // users see it's own orders
+//       include: {
+//         items: true,
+//         address: true,
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             email: true,
+//           },
+//         },
+//       },
+//     });
+//     if (!order) {
+//       return res.status(403).json(new ApiError(403, "No order found."));
+//     }
+
+//     return res
+//       .status(200)
+//       .json(
+//         new ApiResponse(200, order, "Order fetched for the user succesfully"),
+//       );
+//   },
+// );
+
+const getOrderById = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const userId = req.user?.userId;
+  const { orderId } = req.params;
+  const userRole = req.user?.role;
+
+  if (!userId) {
+    return next(new UnauthorizedError("Unauthorized user"));
+  }
+
+  // Build include options based on role
+  const includeOptions: any = {
+    items: true,
+    address: true,
+    coupon: true, // Everyone needs coupon info
+  };
+
+  // Only admins get user details
+  if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+    includeOptions.user = {
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
-    });
-    if (!order) {
-      return res.status(403).json(new ApiError(403, "No order found."));
-    }
+    };
+  }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, order, "Order fetched for the user succesfully"),
-      );
-  },
-);
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      // Regular users can only see their own orders
+      ...(userRole === "USER" && { userId }),
+    },
+    include: includeOptions,
+  });
+
+  if (!order) {
+    return next(new ApiError(404, "Order not found"));
+  }
+
+  return res.status(200).json(new ApiResponse(200, order, "Order fetched successfully"));
+});
 
 export {
   createPaymentOrder,
   capturePayment,
-  getOrderById,
+  // getOrder,
   updateOrderStatusAdminOnly,
   getAllOrdersAdminOnly,
-  getOrderByIdWithUserAdminOnly,
+  // getOrdersByUserId,
+  getOrderById
 };
