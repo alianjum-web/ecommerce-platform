@@ -1,0 +1,51 @@
+import { API_ROUTES } from "@/utils/api";
+import { NextRequest, NextResponse } from "next/server";
+
+const BACKEND_URL =
+  process.env.NODE_ENV === "production"
+    ? process.env.BACKEND_URL
+    : process.env.DEVE_URL;
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!BACKEND_URL) {
+    return NextResponse.json(
+      { success: false, error: "BACKEND URL is not configured" },
+      { status: 500 },
+    );
+  }
+
+  try {
+    const accessToken = request.cookies.get("accessToken")?.value;
+    const refreshToken = request.cookies.get("refreshToken")?.value;
+
+    if (!accessToken)
+      return NextResponse.json(
+        { success: true, error: "Unauthenticated" },
+        { status: 400 },
+      );
+      const {id} = await params;
+      const status = await request.json();
+
+      const backendRes = await fetch(`${API_ROUTES.ORDER}/${id}/status`,{
+        method: "PUT", 
+        headers: {
+            "Content-Type": "application/json", 
+            "Cookie": `accessToken=${accessToken}; refreshToken=${refreshToken}`
+        },
+        body: JSON.stringify(status)
+      } );
+
+      const data = await backendRes.json();
+      return NextResponse.json(data, { status: backendRes.status })
+
+  } catch (error) {
+    console.log(
+      "Error occured while updating the status of the product",
+      error,
+    );
+    return NextResponse.json(
+      { success: false, error: "Error updating order status" },
+      { status: 500 },
+    );
+  }
+}
