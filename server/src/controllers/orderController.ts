@@ -294,7 +294,7 @@ const capturePayment = asyncHandler(
   },
 );
 
-const getOrder = asyncHandler(
+const getOrderById = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
     const { orderId } = req.params;
@@ -397,7 +397,7 @@ const getAllOrdersAdminOnly = asyncHandler(
   },
 );
 
-const getOrdersByUserId = asyncHandler(
+const getOrderByIdWithUserAdminOnly = asyncHandler(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
     if (!userId) {
@@ -434,8 +434,8 @@ const getOrdersByUserId = asyncHandler(
 export {
   createPaymentOrder,
   capturePayment,
-  getOrder,
+  getOrderById,
   updateOrderStatusAdminOnly,
   getAllOrdersAdminOnly,
-  getOrdersByUserId,
+  getOrderByIdWithUserAdminOnly,
 };

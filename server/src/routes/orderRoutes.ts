@@ -4,8 +4,8 @@ import {
   createPaymentOrder,
   capturePayment,
   getAllOrdersAdminOnly,
-  getOrder,
-  getOrdersByUserId,
+  getOrderById,
+  getOrderByIdWithUserAdminOnly,
   updateOrderStatusAdminOnly,
 } from "../controllers/orderController";
 import { ApiResponse } from "../utils/ApiResponse";
@@ -41,8 +41,8 @@ router.get('/methods', (req, res) => {
 });
 
 // router.post("/create-final-order", createFinalOrderInDB);
-router.get("/get-single-order/:orderId", getOrder);
-router.get("/get-order-by-user-id", getOrdersByUserId);
+router.get("/get-order/:orderId", getOrderById);
+router.get("/get-order-with-user/:orderId", isSuperAdmin, getOrderByIdWithUserAdminOnly);
 router.get("/get-all-orders-for-admin", isSuperAdmin, getAllOrdersAdminOnly);
 router.put("/:orderId/status", isSuperAdmin, updateOrderStatusAdminOnly);
 
