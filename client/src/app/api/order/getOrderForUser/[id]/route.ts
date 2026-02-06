@@ -6,7 +6,7 @@ const BACKEND_URL =
     ? process.env.BACKEND_URL
     : process.env.DEVE_URL;
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!BACKEND_URL) {
     return NextResponse.json(
       { success: false, error: "BACKEND URL is not configured" },
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       );
 
-      const backendRes = await fetch(`${API_ROUTES.ORDER}/get-order-by-user-id`,{
+      const { id } = await params;
+
+      const backendRes = await fetch(`${API_ROUTES.ORDER}/${id}`,{
         method: "GET", 
         headers: {
             "Content-Type": "application/json", 

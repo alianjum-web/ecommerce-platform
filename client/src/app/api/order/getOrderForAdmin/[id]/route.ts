@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       const { id } = await request.json()
 
-      const backendRes = await fetch(`${API_ROUTES.ORDER}/get-single-order/${id}`,{
+      const backendRes = await fetch(`${API_ROUTES.ORDER}/admin/${id}`,{
         method: "GET", 
         headers: {
             "Content-Type": "application/json", 
