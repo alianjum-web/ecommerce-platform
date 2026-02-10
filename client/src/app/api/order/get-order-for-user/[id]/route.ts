@@ -1,18 +1,18 @@
 import { API_ROUTES } from "@/utils/api";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL =
-  process.env.NODE_ENV === "production"
-    ? process.env.BACKEND_URL
-    : process.env.DEVE_URL;
+// const BACKEND_URL =
+//   process.env.NODE_ENV === "production"
+//     ? process.env.BACKEND_URL
+//     : process.env.DEVE_URL;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!BACKEND_URL) {
-    return NextResponse.json(
-      { success: false, error: "BACKEND URL is not configured" },
-      { status: 500 },
-    );
-  }
+  // if (!BACKEND_URL) {
+  //   return NextResponse.json(
+  //     { success: false, error: "BACKEND URL is not configured" },
+  //     { status: 500 },
+  //   );
+  // }
 
   try {
     const accessToken = request.cookies.get("accessToken")?.value;
@@ -21,12 +21,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!accessToken)
       return NextResponse.json(
         { success: true, error: "Unauthenticated" },
-        { status: 400 },
+        { status: 401 },
       );
 
       const { id } = await request.json()
 
-      const backendRes = await fetch(`${API_ROUTES.ORDER}/admin/${id}`,{
+      const backendRes = await fetch(`${API_ROUTES.ORDER}/order/${id}`,{
         method: "GET", 
         headers: {
             "Content-Type": "application/json", 

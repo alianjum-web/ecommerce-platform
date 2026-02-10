@@ -1,18 +1,18 @@
 import { API_ROUTES } from "@/utils/api";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL =
-  process.env.NODE_ENV === "production"
-    ? process.env.BACKEND_URL
-    : process.env.DEVE_URL;
+// const BACKEND_URL =
+//   process.env.NODE_ENV === "production"
+//     ? process.env.BACKEND_URL
+//     : process.env.DEVE_URL;
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!BACKEND_URL) {
-    return NextResponse.json(
-      { success: false, error: "BACKEND URL is not configured" },
-      { status: 500 },
-    );
-  }
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // if (!BACKEND_URL) {
+  //   return NextResponse.json(
+  //     { success: false, error: "BACKEND URL is not configured" },
+  //     { status: 500 },
+  //   );
+  // }
 
   try {
     const accessToken = request.cookies.get("accessToken")?.value;
@@ -21,17 +21,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!accessToken)
       return NextResponse.json(
         { success: true, error: "Unauthenticated" },
-        { status: 400 },
+        { status: 401 },
       );
+      const {id} = await params;
+      const status = await request.json();
 
-      const { id } = await params;
-
-      const backendRes = await fetch(`${API_ROUTES.ORDER}/${id}`,{
-        method: "GET", 
+      const backendRes = await fetch(`${API_ROUTES.ORDER}/${id}/status`,{
+        method: "PUT", 
         headers: {
             "Content-Type": "application/json", 
             "Cookie": `accessToken=${accessToken}; refreshToken=${refreshToken}`
         },
+        body: JSON.stringify(status)
       } );
 
       const data = await backendRes.json();
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   } catch (error) {
     console.log(
-      "Error getting user's order",
+      "Error occured while updating the status of the product",
       error,
     );
     return NextResponse.json(
-      { success: false, error: "Error getting user's order" },
+      { success: false, error: "Error updating order status" },
       { status: 500 },
     );
   }

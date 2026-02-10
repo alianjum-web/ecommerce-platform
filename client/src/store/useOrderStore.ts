@@ -2,6 +2,7 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 import { OrderStore } from "@/types/order/orderTypes";
+import { http } from "@/lib/http";
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   currentOrder: null,
@@ -14,8 +15,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   createOrder: async (orderData) => {
     set({ isLoading: true, error: null, isPaymentProcessing: true });
     try {
-      const response = await axios.post(
-        `${API_ROUTES.ORDER}/create-order`, // CHANGED: Unified endpoint
+      const { data } = await http.post(
+        `order/create-order`, 
         orderData,
         { withCredentials: true }
       );
@@ -23,10 +24,10 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       set({
         isLoading: false,
         isPaymentProcessing: false,
-        currentOrder: response.data.data,
+        currentOrder: data.data,
       });
 
-      return response.data;
+      return data;
     } catch (error: any) {
       set({
         isLoading: false,
@@ -40,8 +41,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   captureOrder: async (captureData) => {
     set({ isLoading: true, error: null, isPaymentProcessing: true });
     try {
-      const response = await axios.post(
-        `${API_ROUTES.ORDER}/capture-order`, // CHANGED: Unified endpoint
+      const { data } = await http.post(
+        `order/capture-order`, // CHANGED: Unified endpoint
         captureData,
         { withCredentials: true }
       );
@@ -49,10 +50,10 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       set({
         isLoading: false,
         isPaymentProcessing: false,
-        currentOrder: response.data.data.order,
+        currentOrder: data.data.order,
       });
 
-      return response.data;
+      return data;
     } catch (error: any) {
       set({
         isLoading: false,
@@ -62,12 +63,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       throw error;
     }
   },
-// admin
+
   updateOrderStatus: async (orderId, status) => {
     set({ isLoading: true, error: null });
     try {
       await axios.put(
-        `${API_ROUTES.ORDER}/${orderId}/status`,
+        `order/${orderId}/status`,
         { status },
         { withCredentials: true }
       );
@@ -98,12 +99,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       return false;
     }
   },
-// admin
+
   getAllOrdersForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/get-all-orders-for-admin`,
+        `order/get-all-orders-for-admin`,
         { withCredentials: true }
       );
       set({ isLoading: false, adminOrders: response.data });
@@ -115,14 +116,13 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   
   setCurrentOrder: (order) => set({ currentOrder: order }),
-  
 
-  
+  // (for both admin and user same -- output data depends on role of them )
   getAllOrders: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/get-all-orders`,
+        `order/get-all-orders`,
         { withCredentials: true }
       );
       set({ isLoading: false, userOrders: response.data });
@@ -137,7 +137,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/${orderId}`,
+        `order/${orderId}`,
         { withCredentials: true }
       );
       set({ isLoading: false, currentOrder: response.data });
@@ -152,7 +152,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(
-        `${API_ROUTES.ORDER}/admin/${orderId}`,
+        `order/admin/${orderId}`,
         { withCredentials: true }
       );
       set({ isLoading: false, currentOrder: response.data });

@@ -103,7 +103,6 @@
 import { create } from "zustand";
 import type { Address } from "@/types/address/Address";
 import { http } from "@/lib/http";
-import { ReceiptIndianRupee } from "lucide-react";
 
 interface AddressStore {
   addresses: Address[];
