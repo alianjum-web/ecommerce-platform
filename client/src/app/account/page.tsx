@@ -44,12 +44,12 @@
 //   const [editingAddress, setEditingAddress] = useState<string | null>(null);
 //   const [formData, setFormData] = useState(initialAddressFormState);
 //   const { toast } = useToast();
-//   const { userOrders, getOrdersByUserId, isLoading } = useOrderStore();
+//   const { userOrders, getAllOrders, isLoading } = useOrderStore();
 
 //   useEffect(() => {
 //     fetchAddresses();
-//     getOrdersByUserId();
-//   }, [fetchAddresses, getOrdersByUserId]);
+//     getAllOrders();
+//   }, [fetchAddresses, getAllOrders]);
 
 //   console.log(userOrders, "userOrders");
 
@@ -408,7 +408,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Address, useAddressStore } from "@/store/useAddressStore";
+import { useAddressStore } from "@/store/useAddressStore";
+import type { Address } from "@/types/address/Address";
 import { useOrderStore } from "@/store/useOrderStore";
 import { useEffect, useState } from "react";
 import { 
@@ -846,12 +847,12 @@ function UserAccountPage() {
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialAddressFormState);
   const { toast } = useToast();
-  const { userOrders, getOrdersByUserId, isLoading: ordersLoading } = useOrderStore();
+  const { userOrders, getAllOrders, isLoading: ordersLoading } = useOrderStore();
 
   useEffect(() => {
     fetchAddresses();
-    getOrdersByUserId();
-  }, [fetchAddresses, getOrdersByUserId]);
+    getAllOrders();
+  }, [fetchAddresses, getAllOrders]);
 
   const handleAddressSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
