@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+console.log(`This is the url: ${BACKEND_URL}`)
     const backendRes = await fetch(`${BACKEND_URL}/api/cart/fetch-cart`, {
       method: "GET",
       headers: {
