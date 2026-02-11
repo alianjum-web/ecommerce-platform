@@ -1,24 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
-
-export interface Address {
-  id: string;
-  isDefault: boolean;
-  [key: string]: any;
-}
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { Address } from '@/types/checkout';
 
 export const useCheckoutAddress = (addresses: Address[]) => {
   const [selectedAddress, setSelectedAddress] = useState<string>("");
+  const hasInitialized = useRef(false); // ✅ Add initialization flag
 
-  // Set default address
+  // ✅ FIX: Only run once when addresses are first loaded
   useEffect(() => {
-    const defaultAddress = addresses.find((addr) => addr.isDefault);
-    if (defaultAddress) {
-      setSelectedAddress(defaultAddress.id);
-    } else if (addresses.length > 0) {
-      // If no default, select the first one
-      setSelectedAddress(addresses[0].id);
+    // Only set initial address once
+    if (!hasInitialized.current && addresses.length > 0) {
+      const defaultAddress = addresses.find((addr) => addr.isDefault);
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress.id);
+      } else {
+        setSelectedAddress(addresses[0].id);
+      }
+      hasInitialized.current = true; // Mark as initialized
     }
-  }, [addresses]);
+  }, [addresses]); // Still depends on addresses but won't run repeatedly
 
   const handleAddressSelect = useCallback((addressId: string) => {
     setSelectedAddress(addressId);

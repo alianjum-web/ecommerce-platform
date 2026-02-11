@@ -1,29 +1,48 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export const useCheckoutData = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(true);
+  const hasFetched = useRef(false); // ✅ Prevent multiple fetches
 
-  const fetchCheckoutData = async (
+  const fetchCheckoutData = useCallback(async (
     fetchAddresses: () => Promise<void>,
     fetchCart: () => Promise<void>,
     fetchCoupons: () => Promise<void>
   ) => {
+    // ✅ Prevent duplicate fetches
+    if (hasFetched.current) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await Promise.all([fetchAddresses(), fetchCart(), fetchCoupons()]);
+      hasFetched.current = true; // Mark as fetched
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load checkout data",
-        variant: "destructive",
-      });
-      throw error;
+      if (isMounted.current) {
+        toast({
+          title: "Error",
+          description: "Failed to load checkout data",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [toast]);
+
+  // Cleanup
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   return { isLoading, fetchCheckoutData };
 };
