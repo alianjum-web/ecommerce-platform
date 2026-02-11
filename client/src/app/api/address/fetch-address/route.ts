@@ -1,21 +1,21 @@
 // app/api/address/get-address/route.ts
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL =
-  process.env.NODE_ENV === "production"
-    ? process.env.BACKEND_URL
-    : process.env.DEV_URL;
+import { API_ROUTES } from "@/utils/api";
+// const BACKEND_URL =
+//   process.env.NODE_ENV === "production"
+//     ? process.env.BACKEND_URL
+//     : process.env.DEV_URL;
 
 export async function GET(request: NextRequest) {
-  if (!BACKEND_URL) {
-    return NextResponse.json({ success: false, error: "Backend URL not set" }, { status: 500 });
-  }
+  // if (!BACKEND_URL) {
+  //   return NextResponse.json({ success: false, error: "Backend URL not set" }, { status: 500 });
+  // }
 
   try {
     const accessToken = request.cookies.get("accessToken")?.value;
     const refreshToken = request.cookies.get("refreshToken")?.value;
 
-    const backendRes = await fetch(`${BACKEND_URL}/api/address/get-address`, {
+    const backendRes = await fetch(`${API_ROUTES.ADDRESS}/get-address`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
