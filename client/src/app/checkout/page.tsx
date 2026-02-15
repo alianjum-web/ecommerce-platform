@@ -1,7 +1,7 @@
 "use client";
 
-import { FuturisticCheckoutLoader } from "@/hooks/checkout/FuturisticCheckoutLoader";
-import { PayPalProviderWrapper } from "@/hooks/checkout/PayPalProviderWrapper";
+import { FuturisticCheckoutLoader } from "@/components/user/checkout/FuturisticCheckoutLoader";
+import { PayPalProviderWrapper } from "@/components/user/checkout/PayPalProviderWrapper";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 

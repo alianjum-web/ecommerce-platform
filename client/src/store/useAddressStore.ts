@@ -7,7 +7,7 @@ interface AddressStore {
   addresses: Address[];
   isLoading: boolean;
   error: string | null;
-  lastFetched: number | null; // ✅ Add timestamp
+  lastFetched: number | null; 
 
   fetchAddresses: () => Promise<void>;
   createAddress: (address: Omit<Address, "id">) => Promise<Address | null>;

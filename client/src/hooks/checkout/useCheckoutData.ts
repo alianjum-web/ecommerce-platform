@@ -5,14 +5,14 @@ export const useCheckoutData = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const isMounted = useRef(true);
-  const hasFetched = useRef(false); // ✅ Prevent multiple fetches
+  const hasFetched = useRef(false);
 
   const fetchCheckoutData = useCallback(async (
     fetchAddresses: () => Promise<void>,
     fetchCart: () => Promise<void>,
     fetchCoupons: () => Promise<void>
   ) => {
-    // ✅ Prevent duplicate fetches
+ 
     if (hasFetched.current) {
       return;
     }
