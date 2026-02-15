@@ -6,23 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCouponStore } from "@/store/useCouponStore";
-import { 
-  Tag, 
-  Percent, 
-  Calendar, 
-  Hash, 
-  Sparkles, 
-  Zap, 
-  Ticket, 
+import {
+  Tag,
+  Percent,
+  Calendar,
+  Sparkles,
+  Zap,
+  Ticket,
   Clock,
   Users,
   Shield,
   Key,
   Copy,
-  CheckCircle,
-  AlertCircle,
-  Rocket,
-  Gift
+  Gift,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -31,6 +27,10 @@ import { CouponHeader } from "@/components/super-admin/coupon/CouponHeader";
 import { CouponPreview } from "@/components/super-admin/coupon/CouponPreview";
 import { FormField } from "@/components/super-admin/coupon/CouponFormField";
 import { DateValidation } from "@/components/super-admin/coupon/CouponDateValidation";
+import {
+  generateCouponCode,
+  validateGeneratedCode,
+} from "@/utils/coupon/couponGenerator";
 
 function SuperAdminManageCouponsPage() {
   const [formData, setFormData] = useState({
@@ -40,7 +40,7 @@ function SuperAdminManageCouponsPage() {
     endDate: "",
     usageLimit: 0,
   });
-  
+
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
   const router = useRouter();
   const { toast } = useToast();
@@ -48,12 +48,12 @@ function SuperAdminManageCouponsPage() {
 
   // Set default dates
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const nextMonthStr = nextMonth.toISOString().split('T')[0];
+    const nextMonthStr = nextMonth.toISOString().split("T")[0];
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       startDate: prev.startDate || today,
       endDate: prev.endDate || nextMonthStr,
@@ -62,47 +62,33 @@ function SuperAdminManageCouponsPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name.includes('Percent') || name.includes('Limit') ? parseFloat(value) || 0 : value,
+      [name]:
+        name.includes("Percent") || name.includes("Limit")
+          ? parseFloat(value) || 0
+          : value,
     }));
   };
 
-  const generateCouponCode = () => {
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const vowels = "AEIOU";
-    const consonants = "BCDFGHJKLMNPQRSTVWXYZ";
-    
-    // Generate a readable code: CVC-CVC-XX
-    let result = "";
-    
-    // First part: CVC
-    for (let i = 0; i < 3; i++) {
-      if (i % 2 === 0) {
-        result += consonants.charAt(Math.floor(Math.random() * consonants.length));
-      } else {
-        result += vowels.charAt(Math.floor(Math.random() * vowels.length));
+  const [isGenerating, setIsGenerating] = useState(false);
+  const handleGenerateCoupon = () => {
+    setIsGenerating(true);
+    try {
+      const result = generateCouponCode();
+
+      if (!validateGeneratedCode(result)) {
+        console.warn("Generated code failed validation, regenerating...");
+        return handleGenerateCoupon(); // try again
       }
+
+      setFormData((prev) => ({ ...prev, code: result }));
+      setGeneratedCodes((prev) => [result, ...prev.slice(0, 4)]);
+    } catch (error) {
+      console.error("Failed to generate the coupon", error);
+    } finally {
+      setIsGenerating(false);
     }
-    
-    result += "-";
-    
-    // Second part: CVC
-    for (let i = 0; i < 3; i++) {
-      if (i % 2 === 0) {
-        result += consonants.charAt(Math.floor(Math.random() * consonants.length));
-      } else {
-        result += vowels.charAt(Math.floor(Math.random() * vowels.length));
-      }
-    }
-    
-    result += "-";
-    
-    // Last part: 2 numbers
-    result += Math.floor(10 + Math.random() * 90);
-    
-    setFormData(prev => ({ ...prev, code: result }));
-    setGeneratedCodes(prev => [result, ...prev.slice(0, 4)]);
   };
 
   const copyToClipboard = () => {
@@ -117,7 +103,7 @@ function SuperAdminManageCouponsPage() {
 
   const handleCouponSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
+
     // Date validation
     if (new Date(formData.endDate) <= new Date(formData.startDate)) {
       toast({
@@ -160,11 +146,13 @@ function SuperAdminManageCouponsPage() {
       setFormData({
         code: "",
         discountPercent: 0,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+          .toISOString()
+          .split("T")[0],
         usageLimit: 0,
       });
-      
+
       router.push("/super-admin/coupons/list");
     }
   };
@@ -172,9 +160,8 @@ function SuperAdminManageCouponsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-card/20 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-      
         <CouponHeader />
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-8">
@@ -204,16 +191,19 @@ function SuperAdminManageCouponsPage() {
                     </Label>
                     <Button
                       type="button"
-                      onClick={generateCouponCode}
+                      onClick={handleGenerateCoupon}
+                      disabled={isGenerating}
                       variant="outline"
                       size="sm"
                       className="border-border hover:border-primary"
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Code
+                      <Sparkles
+                        className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`}
+                      />
+                      {isGenerating ? "Generating..." : "Generate Code"}
                     </Button>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <Input
                       name="code"
@@ -234,7 +224,7 @@ function SuperAdminManageCouponsPage() {
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {/* Recent Generated Codes */}
                   {generatedCodes.length > 0 && (
                     <div className="space-y-2">
@@ -247,7 +237,9 @@ function SuperAdminManageCouponsPage() {
                             key={idx}
                             variant="outline"
                             className="cursor-pointer hover:border-primary hover:text-primary"
-                            onClick={() => setFormData(prev => ({ ...prev, code }))}
+                            onClick={() =>
+                              setFormData((prev) => ({ ...prev, code }))
+                            }
                           >
                             {code}
                           </Badge>
@@ -281,7 +273,7 @@ function SuperAdminManageCouponsPage() {
                     icon={<Calendar className="h-4 w-4" />}
                     required
                   />
-                  
+
                   <FormField
                     label="End Date"
                     name="endDate"
@@ -294,9 +286,9 @@ function SuperAdminManageCouponsPage() {
                 </div>
 
                 {/* Date Validation */}
-                <DateValidation 
-                  startDate={formData.startDate} 
-                  endDate={formData.endDate} 
+                <DateValidation
+                  startDate={formData.startDate}
+                  endDate={formData.endDate}
                 />
 
                 {/* Usage Limit */}
@@ -341,19 +333,28 @@ function SuperAdminManageCouponsPage() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <Zap className="h-4 w-4 text-secondary flex-shrink-0 mt-0.5" />
-                  <span>Use readable codes like "SUMMER25" for better brand recall</span>
+                  <span>
+                    Use readable codes like "SUMMER25" for better brand recall
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Shield className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
-                  <span>Set usage limits to prevent abuse of high-value coupons</span>
+                  <span>
+                    Set usage limits to prevent abuse of high-value coupons
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Clock className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Create seasonal coupons aligned with marketing campaigns</span>
+                  <span>
+                    Create seasonal coupons aligned with marketing campaigns
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Percent className="h-4 w-4 text-secondary flex-shrink-0 mt-0.5" />
-                  <span>Test different discount percentages to find optimal conversion rates</span>
+                  <span>
+                    Test different discount percentages to find optimal
+                    conversion rates
+                  </span>
                 </li>
               </ul>
             </div>
@@ -396,22 +397,27 @@ function SuperAdminManageCouponsPage() {
                           key={i}
                           className={`h-2 w-6 rounded-full ${
                             i < Math.min(formData.discountPercent / 20, 5)
-                              ? 'bg-gradient-to-r from-primary to-secondary'
-                              : 'bg-border'
+                              ? "bg-gradient-to-r from-primary to-secondary"
+                              : "bg-border"
                           }`}
                         />
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Estimated Impact</span>
+                    <span className="text-muted-foreground">
+                      Estimated Impact
+                    </span>
                     <span className="font-medium text-foreground">
-                      {formData.discountPercent > 30 ? 'High' : 
-                       formData.discountPercent > 15 ? 'Medium' : 'Low'}
+                      {formData.discountPercent > 30
+                        ? "High"
+                        : formData.discountPercent > 15
+                          ? "Medium"
+                          : "Low"}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Code Security</span>
                     <span className="font-medium text-success flex items-center gap-1">
@@ -424,35 +430,39 @@ function SuperAdminManageCouponsPage() {
 
               {/* Quick Stats */}
               <div className="glass-effect rounded-2xl p-6 border border-glass-border">
-                <h3 className="font-semibold text-foreground mb-4">Coupon Statistics</h3>
+                <h3 className="font-semibold text-foreground mb-4">
+                  Coupon Statistics
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-primary">
                       {formData.discountPercent}%
                     </div>
-                    <p className="text-xs text-muted-foreground">Discount Rate</p>
+                    <p className="text-xs text-muted-foreground">
+                      Discount Rate
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-secondary">
-                      {formData.usageLimit || '∞'}
+                      {formData.usageLimit || "∞"}
                     </div>
                     <p className="text-xs text-muted-foreground">Max Uses</p>
                   </div>
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-accent">
-                      {formData.code ? 'Active' : '—'}
+                      {formData.code ? "Active" : "—"}
                     </div>
                     <p className="text-xs text-muted-foreground">Status</p>
                   </div>
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-foreground">
-                      {formData.startDate && formData.endDate 
+                      {formData.startDate && formData.endDate
                         ? Math.floor(
-                            (new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / 
-                            (1000 * 60 * 60 * 24)
+                            (new Date(formData.endDate).getTime() -
+                              new Date(formData.startDate).getTime()) /
+                              (1000 * 60 * 60 * 24),
                           )
-                        : '—'
-                      }
+                        : "—"}
                     </div>
                     <p className="text-xs text-muted-foreground">Days Valid</p>
                   </div>

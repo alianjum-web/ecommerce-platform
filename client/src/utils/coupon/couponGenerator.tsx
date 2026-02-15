@@ -2,7 +2,6 @@
 export const generateCouponCode = (): string => {
   const vowels = 'AEIOU';
   const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
-  const numbers = '0123456789';
 
 
   const getRandomChar = (chars: string) =>
