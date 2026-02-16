@@ -101,6 +101,7 @@ export function PaymentMethods({
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
+                      // checking weather img or icon:- img start with "/"
                       {option.icon.startsWith("/") ? (
                         <div className="h-8 w-12 flex items-center justify-center bg-white rounded border">
                           <img

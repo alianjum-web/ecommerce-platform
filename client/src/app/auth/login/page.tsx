@@ -257,7 +257,7 @@ function LoginPage() {
         <div className="hidden lg:block lg:w-1/2 relative overflow-hidden group">
           <div className="absolute inset-0">
             <Image
-              src="images/banner2.jpg"
+              src="/images/banner2.jpg"
               alt="Login Banner"
               fill
               style={{ objectFit: "cover", objectPosition: "center" }}

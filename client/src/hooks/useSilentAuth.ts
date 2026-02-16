@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authLogger } from "@/utils/Logger";
+import { getSafeISOString } from "@/utils/getSafeISOString";
 
 export default function useSilentAuth() {
   const { refreshAccessToken, checkSession, getTokenExpiryInfo } =
@@ -18,7 +19,7 @@ export default function useSilentAuth() {
 
       if (sessionInfo.hasRefreshToken && !sessionInfo.hasAccessToken) {
         authLogger.warn(
-          "Missing access token but have refresh token - refreshing immediately"
+          "Missing access token but have refresh token - refreshing immediately",
         );
         return 0;
       }
@@ -33,8 +34,9 @@ export default function useSilentAuth() {
 
         if (expiryInfo.timeUntilExpiry > 0) {
           const refreshTime = Math.max(expiryInfo.timeUntilExpiry * 0.2, 10000);
+      
           authLogger.debug(
-            `Scheduled refresh in ${Math.round(refreshTime / 60000)}m`
+            `Scheduled refresh in ${Math.round(refreshTime / 60000)}m`,
           );
           return refreshTime;
         }
@@ -82,6 +84,13 @@ export default function useSilentAuth() {
         return;
       }
 
+           // ✅ FIXED: Use getSafeISOString here
+      authLogger.info(`Scheduled next token refresh`, {
+        refreshInMinutes: Math.round(refreshTime / 60000),
+        refreshInSeconds: Math.round(refreshTime / 1000),
+        scheduledTime: getSafeISOString(Date.now() + refreshTime) || 'Invalid date',
+      });
+
       authLogger.info(`Scheduled next token refresh`, {
         refreshInMinutes: Math.round(refreshTime / 60000),
         refreshInSeconds: Math.round(refreshTime / 1000),
@@ -123,7 +132,7 @@ export default function useSilentAuth() {
         // Reschedule next refresh
         setTimeout(() => {
           authLogger.debug(
-            "Rescheduling next refresh after successful refresh"
+            "Rescheduling next refresh after successful refresh",
           );
           scheduleTokenRefresh();
         }, 1000);
@@ -137,7 +146,7 @@ export default function useSilentAuth() {
         retryCountRef.current++;
         const backoffTime = Math.min(
           1000 * Math.pow(2, retryCountRef.current),
-          30000
+          30000,
         ); // max 30s
 
         authLogger.info(`Scheduling retry with exponential backoff`, {
@@ -155,7 +164,7 @@ export default function useSilentAuth() {
       retryCountRef.current++;
       const backoffTime = Math.min(
         1000 * Math.pow(2, retryCountRef.current),
-        30000
+        30000,
       );
 
       authLogger.info(`Scheduling retry after error`, {
@@ -185,7 +194,7 @@ export default function useSilentAuth() {
       // ✅ CRITICAL FIX: If we have refreshToken but NO accessToken, refresh IMMEDIATELY
       if (sessionInfo.hasRefreshToken && !sessionInfo.hasAccessToken) {
         authLogger.warn(
-          "Has refresh token but NO access token - refreshing immediately"
+          "Has refresh token but NO access token - refreshing immediately",
         );
         await performTokenRefresh();
         return;
@@ -234,10 +243,13 @@ export default function useSilentAuth() {
       checkAndRefreshIfNeeded();
     }, 2000);
 
-    intervalRef.current = setInterval(() => {
-      authLogger.debug("Performing scheduled token health check");
-      checkAndRefreshIfNeeded();
-    }, 3 * 60 * 1000);
+    intervalRef.current = setInterval(
+      () => {
+        authLogger.debug("Performing scheduled token health check");
+        checkAndRefreshIfNeeded();
+      },
+      3 * 60 * 1000,
+    );
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
