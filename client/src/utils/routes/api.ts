@@ -12,3 +12,10 @@ export const API_ROUTES = {
   ADDRESS: `${API_BASE_URL}/address`,
   ORDER: `${API_BASE_URL}/order`,
 };
+
+export const ROUTES = {
+  SUPER_ADMIN: "/super-admin",
+  HOME: "/home",
+  REGISTER: "/auth/register",
+  FORGOT_PASSWORD: "/auth/forgot-password",
+} as const;

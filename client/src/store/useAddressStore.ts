@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Address } from "@/types/address/Address";
 import { http } from "@/lib/http";
-import { API_ROUTES } from "@/utils/api";
+import { API_ROUTES } from "@/utils/routes/api";
 
 interface AddressStore {
   addresses: Address[];

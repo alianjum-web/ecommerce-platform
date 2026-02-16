@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCartStore } from "@/store/useCartStore";
-import { 
-  Minus, 
-  Plus, 
-  Trash2, 
-  ShoppingCart, 
-  Sparkles, 
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingCart,
+  Sparkles,
   Package,
   Truck,
   Shield,
@@ -21,7 +21,7 @@ import {
   CheckCircle,
   CreditCard,
   ArrowRight,
-  ShoppingBag
+  ShoppingBag,
 } from "lucide-react";
 import { redirect, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -36,7 +36,8 @@ import { CartRedirect } from "@/components/user/cart/CartRedirect";
 function getCartItems(items: any): any[] {
   if (Array.isArray(items)) return items;
   if (items?.items && Array.isArray(items.items)) return items.items;
-  if (items?.data?.items && Array.isArray(items.data.items)) return items.data.items;
+  if (items?.data?.items && Array.isArray(items.data.items))
+    return items.data.items;
   return [];
 }
 
@@ -85,9 +86,12 @@ function UserCartPage() {
 
   const cartItems = getCartItems(items);
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
   const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.0889;; // 8% tax
+  const tax = subtotal * 0.0889; // 8% tax
   const total = subtotal + shipping + tax;
 
   if (!isMounted || isLoading) {
@@ -126,13 +130,13 @@ function UserCartPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="border-primary text-primary">
                 <Package className="h-3 w-3 mr-1" />
                 {itemCount} Items
               </Badge>
-              
+
               <Button
                 onClick={fetchCart}
                 variant="outline"
@@ -175,107 +179,13 @@ function UserCartPage() {
                     isUpdating={isUpdating}
                   />
                 ))}
-                <CartRedirect 
-                  onCheckout={() => router.push('/checkout')}
-                  onContinueShopping={() => router.push('/listing')}
+                <CartRedirect
+                  onCheckout={() => router.push("/checkout")}
+                  onContinueShopping={() => router.push("/listing")}
                 />
               </div>
-
-       {/* Actions */}
-      
-
-
-              {/* Cart Actions */}
-              {/* <Card className="glass-effect border border-glass-border">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-warning" />
-                      <p className="text-sm text-muted-foreground">
-                        Items will be reserved for 30 minutes
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <Button
-                        onClick={() => router.push("/wishlist")}
-                        variant="outline"
-                        className="border-border"
-                      >
-                        <Heart className="h-4 w-4 mr-2" />
-                        Save All to Wishlist
-                      </Button>
-                      
-                      <Button
-                        onClick={() => {
-                          if (confirm("Clear all items from cart?")) {
-                            cartItems.forEach(item => handleRemoveItem(item.id));
-                          }
-                        }}
-                        variant="outline"
-                        className="border-destructive/20 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear Cart
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card> */}
             </div>
-
-            {/* Cart Summary */}
-            {/* <div className="lg:w-96"> */}
-              {/* <CartSummary
-                subtotal={subtotal}
-                // shipping={shipping}
-                // tax={tax}
-                // total={total}
-                itemCount={itemCount}
-                onCheckout={() => router.push("/checkout")}
-                onContinueShopping={() => router.push("/listing")}
-              /> */}
-
-              {/* Promo Code */}
-              {/* <Card className="mt-4 glass-effect border border-glass-border">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Gift className="h-4 w-4 text-accent" />
-                    <h4 className="font-medium text-foreground">Promo Code</h4>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter code"
-                      className="bg-input border-border"
-                    />
-                    <Button variant="outline" className="border-border">
-                      Apply
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card> */}
-
-              {/* Trust Badges */}
-              {/* <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-success" />
-                  <span className="text-xs text-muted-foreground">30-Day Returns</span>
-                </div>
-                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Secure Payment</span>
-                </div>
-                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-secondary" />
-                  <span className="text-xs text-muted-foreground">Free Shipping</span>
-                </div>
-                <div className="glass-effect rounded-lg p-3 border border-glass-border flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <span className="text-xs text-muted-foreground">Quality Guarantee</span>
-                </div>
-              </div> */}
-            </div>
-          // </div>
+          </div>
         )}
       </div>
     </div>

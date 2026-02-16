@@ -14,15 +14,17 @@ const FloatingParticles = ({ isVisible }: { isVisible: boolean }) => {
         <div
           key={i}
           className="error-particle absolute animate-twinkle"
-          style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
-            width: `${Math.random() * 3 + 1}px`,
-            height: `${Math.random() * 3 + 1}px`,
-            animationDelay: `${Math.random() * 5}s`,
-            '--particle-opacity': `${Math.random() * 0.2 + 0.05}`,
-            '--particle-blur': `${Math.random() * 2 + 1}px`,
-          } as any}
+          style={
+            {
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              width: `${Math.random() * 3 + 1}px`,
+              height: `${Math.random() * 3 + 1}px`,
+              animationDelay: `${Math.random() * 5}s`,
+              "--particle-opacity": `${Math.random() * 0.2 + 0.05}`,
+              "--particle-blur": `${Math.random() * 2 + 1}px`,
+            } as any
+          }
         />
       ))}
     </div>
@@ -63,22 +65,20 @@ const RouteTransitionIndicator = ({ pathname }: { pathname: string }) => {
   );
 };
 
-const LayoutContent = ({ 
-  children, 
-  showHeader 
-}: { 
-  children: React.ReactNode; 
-  showHeader: boolean 
+const LayoutContent = ({
+  children,
+  showHeader,
+}: {
+  children: React.ReactNode;
+  showHeader: boolean;
 }) => (
   <div className="min-h-screen bg-background text-foreground theme-transition relative">
     <BackgroundGrid isVisible={showHeader} />
     <FloatingParticles isVisible={showHeader} />
-    
+
     <div className="relative z-10">
       {showHeader && <Header />}
-      <main className="min-h-[calc(100vh-80px)]">
-        {children}
-      </main>
+      <main className="min-h-[calc(100vh-80px)]">{children}</main>
     </div>
   </div>
 );
@@ -95,7 +95,7 @@ function CommonLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showHeader = !pathsNotToShowHeaders.some((currentPath) =>
-    pathname?.startsWith(currentPath)
+    pathname?.startsWith(currentPath),
   );
 
   if (!mounted) {
@@ -115,20 +115,20 @@ function CommonLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <RouteTransitionIndicator pathname={pathname || ''} />
-      <LayoutContent showHeader={showHeader}>
-        {children}
-      </LayoutContent>
-      
+      <RouteTransitionIndicator pathname={pathname || ""} />
+      <LayoutContent showHeader={showHeader}>{children}</LayoutContent>
+
       {/* Floating Navigation Helper */}
       {showHeader && (
         <div className="fixed bottom-8 right-8 z-40">
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="w-12 h-12 rounded-full glass-effect border-glass-border hover:border-primary hover:scale-110 transition-all duration-300 flex items-center justify-center group"
             aria-label="Scroll to top"
           >
-            <span className="text-foreground group-hover:text-primary transition-colors">↑</span>
+            <span className="text-foreground group-hover:text-primary transition-colors">
+              ↑
+            </span>
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         </div>
@@ -137,27 +137,32 @@ function CommonLayout({ children }: { children: React.ReactNode }) {
       {/* Theme-aware scrollbar */}
       <style jsx global>{`
         .theme-transition {
-          transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+          transition:
+            background-color 0.3s ease,
+            color 0.3s ease,
+            border-color 0.3s ease;
         }
-        
+
         .glass-effect {
           backdrop-filter: blur(12px);
           background: hsl(var(--glass));
           border: 1px solid hsl(var(--glass-border));
-          box-shadow: 0 8px 32px var(--glow),
-                    inset 0 1px 0 var(--glass-border);
+          box-shadow:
+            0 8px 32px var(--glow),
+            inset 0 1px 0 var(--glass-border);
         }
-        
+
         .neon-border {
-          box-shadow: 0 0 10px hsl(var(--primary)),
-                    inset 0 0 10px hsl(var(--primary-glow));
+          box-shadow:
+            0 0 10px hsl(var(--primary)),
+            inset 0 0 10px hsl(var(--primary-glow));
         }
-        
+
         .animate-shimmer {
           background-size: 200% auto;
           animation: shimmer 2s linear infinite;
         }
-        
+
         @keyframes shimmer {
           0% {
             background-position: -200% center;
