@@ -19,7 +19,7 @@ export function PaymentMethods({
     {
       id: "PAYPAL" as const,
       name: "PayPal",
-      icon: "/paypal-logo.png",
+      icon: "/images/paypal-logo.png",
       description: "Pay with PayPal account or card",
       badge: "Fast & Secure",
       recommended: true,
@@ -27,7 +27,7 @@ export function PaymentMethods({
     {
       id: "STRIPE" as const,
       name: "Credit/Debit Card",
-      icon: "/stripe-logo.png",
+      icon: "/images/stripe-logo.png",
       description: "Visa, Mastercard, American Express",
       badge: "3D Secure",
       recommended: false,

@@ -1,8 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import banner from "../../../../public/images/banner2.jpg";
-import logo from "../../../../public/images/logo.webp";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -259,7 +257,7 @@ function LoginPage() {
         <div className="hidden lg:block lg:w-1/2 relative overflow-hidden group">
           <div className="absolute inset-0">
             <Image
-              src={banner}
+              src="images/banner2.jpg"
               alt="Login Banner"
               fill
               style={{ objectFit: "cover", objectPosition: "center" }}
@@ -296,7 +294,7 @@ function LoginPage() {
               <div className="relative">
                 <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary via-secondary to-accent opacity-20 blur-xl group-hover:opacity-30 transition-opacity duration-500" />
                 <Image 
-                  src={logo} 
+                  src="/images/logo.webp" 
                   width={180} 
                   height={45} 
                   alt="Company Logo" 
