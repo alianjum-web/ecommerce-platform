@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useState } from "react";
-
+import leftbanner from "../../../public/images/banner.webp"
 interface LoginBannerProps {
   title?: string;
   description?: string;
@@ -19,7 +19,7 @@ export const LoginBanner = ({
       <div className="absolute inset-0">
         {!imageError ? (
           <Image
-            src="/images/banner2.jpg"
+            src={leftbanner}
             alt="Login Banner"
             fill
             style={{ objectFit: "cover", objectPosition: "center" }}

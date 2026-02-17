@@ -7,6 +7,7 @@ import { Mail, Lock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
+import logo from "../../../public/images/logo.webp"
 import { loginSchema, LoginFormData } from "../schemas/loginSchema";
 import { ROUTES } from "@/utils/routes/api";
 import { InputField } from "./FormInput";
@@ -47,7 +48,7 @@ export const LoginForm = () => {
             <div className="relative">
               <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary via-secondary to-accent opacity-20 blur-xl group-hover:opacity-30 transition-opacity duration-500" />
               <Image 
-                src="/images/logo.webp" 
+                src={logo}
                 width={180} 
                 height={45} 
                 alt="Company Logo" 

@@ -12,7 +12,7 @@ import { InputField } from "./FormInput";
 import { LoadingButton } from "./LoadingButton";
 import { PasswordStrengthIndicator } from "./PasswordStrengthIndicator";
 import { BenefitsGrid } from "./BenefitsGrid";
-import logo from "../../../../public/images/logo.webp";
+import logo from "../../../public/images/logo.webp"
 
 export const RegisterForm = () => {
   const { isLoading, onSubmit } = useRegister();
@@ -122,7 +122,6 @@ export const RegisterForm = () => {
             disabled={isLoading}
           />
 
-          <BenefitsGrid />
           
           <LoadingButton isLoading={isLoading} variant="register" />
           
@@ -139,6 +138,7 @@ export const RegisterForm = () => {
             </p>
           </div>
         </form>
+          <BenefitsGrid />
 
         {/* Terms */}
         <div className="mt-8 text-center">
