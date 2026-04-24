@@ -1,73 +1,99 @@
-# ecommerce-platform
+# Ecommerce Platform
 
+Full-stack ecommerce application with a `Next.js` client and an `Express + Prisma` API server.
 
+## Tech Stack
 
+- Frontend: `Next.js`, `React`, `TypeScript`, `Tailwind CSS`, `Radix UI`, `Zustand`
+- Backend: `Express`, `TypeScript`, `Prisma`, `PostgreSQL`
+- Integrations: `Stripe`, `PayPal`, `Cloudinary`, `Nodemailer`
+- Validation and auth utilities: `zod`, `jose`, `jsonwebtoken`, cookie-based auth flow
 
-{
-  "name": "server",
-  "version": "1.0.0",
-  "description": "Ecommerce backend using Express, Prisma, and TypeScript",
-  "main": "src/server.ts",
-  "scripts": {
-    "dev": "nodemon src/server.ts",
-    "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "npx prisma generate --schema=src/prisma/schema.prisma && tsc --skipLibCheck",
-    "start": "node dist/server.js",
-    "prisma:generate": "npx prisma generate --schema=src/prisma/schema.prisma",
-    "prisma:migrate:dev": "npx prisma migrate dev --schema=src/prisma/schema.prisma --name init",
-    "prisma:migrate:deploy": "npx prisma migrate deploy --schema=src/prisma/schema.prisma",
-    "prisma:seed": "ts-node src/prisma/seed.ts",
-    "render-build": "npm ci --include=dev && npx prisma generate --schema=src/prisma/schema.prisma && npm run build && npx prisma migrate deploy --schema=src/prisma/schema.prisma"
-  },
-  "prisma": {
-    "seed": "ts-node src/prisma/seed.ts",
-    "schema": "src/prisma/schema.prisma"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cookie-parser": "^1.4.9",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/lodash": "^4.17.14",
-    "@types/multer": "^1.4.13",
-    "@types/nodemailer": "^6.4.17",
-    "@types/pino": "^7.0.4",
-    "@types/uuid": "^10.0.0",
-    "axios": "^1.7.9",
-    "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.5.1",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "jose": "^5.9.6",
-    "jsonwebtoken": "^9.0.2",
-    "lodash": "^4.17.21",
-    "multer": "^2.0.2",
-    "nodemailer": "^7.0.10",
-    "pino": "^10.0.0",
-    "pino-pretty": "^13.1.2",
-    "stripe": "^20.0.0",
-    "uuid": "^11.0.5",
-    "zod": "^4.1.11"
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.0",
-    "@types/stripe": "^8.0.416",
-    "nodemon": "^3.1.10",
-    "prisma": "^6.19.0",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
-}
+## Project Structure
 
-"prisma": {
-    "seed": "ts-node src/prisma/seed.ts",
-    "schema": "src/prisma/schema.prisma"
-  },
+```text
+ecommerce-platform/
+├─ client/   # Next.js storefront + app routes + admin UI
+└─ server/   # Express API + Prisma schema/migrations
+```
+
+## Prerequisites
+
+- `Node.js` 20+
+- `npm` 10+
+- `PostgreSQL` (or a compatible hosted database)
+
+## Quick Start
+
+1. Install dependencies:
+   ```bash
+   cd server && npm install
+   cd ../client && npm install
+   ```
+2. Create environment files from examples:
+   ```bash
+   cp server/.env.example server/.env.local
+   cp client/.env.example client/.env.local
+   ```
+3. Update values in your local env files (`DATABASE_URL`, JWT/Stripe/Cloudinary keys, API URL, etc.).
+4. Run Prisma migrations and generate client:
+   ```bash
+   cd server
+   npm run prisma:migrate:dev
+   npm run prisma:generate
+   ```
+5. Start both apps in separate terminals:
+   ```bash
+   cd server && npm run dev
+   cd client && npm run dev
+   ```
+
+Default local ports:
+- Frontend: `http://localhost:3012`
+- Backend: `http://localhost:4001`
+
+## Environment Variables
+
+Use `server/.env.example` and `client/.env.example` as templates.
+
+Important variables include:
+- Server: `DATABASE_URL`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, payment/email/cloud storage keys
+- Client: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, and other client runtime flags
+
+Never commit real secrets. Keep `.env.local` and production secrets in your deployment platform.
+
+## Scripts
+
+### Client (`client/package.json`)
+- `npm run dev` - Start Next.js in development mode on port `3012`
+- `npm run build` - Create production build
+- `npm run start` - Start production server
+- `npm run lint` - Run linting
+
+### Server (`server/package.json`)
+- `npm run dev` - Start Express server with `nodemon`
+- `npm run build` - Generate Prisma client and compile TypeScript
+- `npm run start` - Start compiled server from `dist`
+- `npm run prisma:generate` - Generate Prisma client
+- `npm run prisma:migrate:dev` - Create/apply development migrations
+- `npm run prisma:migrate:deploy` - Apply production migrations
+- `npm run prisma:seed` - Seed database
+
+## API Overview
+
+The backend mounts routes under `/api`:
+
+- `/api/auth`
+- `/api/products`
+- `/api/coupon`
+- `/api/settings`
+- `/api/cart`
+- `/api/address`
+- `/api/order`
+- `/api/warm`
+
+## Deployment Notes
+
+- Client and server are deployed independently.
+- For the backend, make sure Prisma generate + migrations run during build/release (`render-build` script is already included).
+- Set production secrets in your platform environment manager (do not store them in git).
