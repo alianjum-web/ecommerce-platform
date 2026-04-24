@@ -56,6 +56,11 @@ Default local ports:
 
 Use `server/.env.example` and `client/.env.example` as templates.
 
+Server loading behavior:
+- Backend runtime (single startup load in `server/src/server.ts`): loads `server/.env.local` then `server/.env` in development, and `server/.env.production` then `server/.env` in production
+- Prisma CLI (`server/prisma.config.ts`) loads env separately for Prisma commands
+- Platform variables (Render/Railway/etc.) are not overridden by file values.
+
 Important variables include:
 - Server: `DATABASE_URL`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, payment/email/cloud storage keys
 - Client: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, and other client runtime flags

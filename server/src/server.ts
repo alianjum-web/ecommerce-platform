@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import "./config/loadEnv";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -14,8 +14,6 @@ import { ApiError } from "./utils/ApiError";
 import { errorHandler } from "./middleware/errHandler";
 import prisma from "./lib/prisma";
 
-// Load environment variables
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
