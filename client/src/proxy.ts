@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
@@ -6,7 +5,7 @@ const publicRoutes = ["/auth/register", "/auth/login"];
 const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
 const userRoutes = ["/home"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
 
@@ -40,7 +39,7 @@ export async function middleware(request: NextRequest) {
       }
 
       return NextResponse.next();
-    } catch (err) {
+    } catch (_err) {
       // token is invalid or expired: let the client handle refresh
       // do NOT attempt server-side refresh here
       if (!publicRoutes.includes(pathname)) {
