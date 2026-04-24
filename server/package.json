@@ -4,8 +4,8 @@
   "description": "Ecommerce backend using Express, Prisma, and TypeScript",
   "main": "src/server.ts",
   "scripts": {
-    "dev": "nodemon src/server.ts",
-    "dev:ts": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "dev:ts": "tsx watch src/server.ts",
     "build": "npx prisma generate --schema=src/prisma/schema.prisma && tsc --skipLibCheck",
     "start": "node dist/server.js",
     "prisma:generate": "npx prisma generate --schema=src/prisma/schema.prisma",
@@ -40,15 +40,6 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10",
-    "prisma": "^7.3.0",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3",
-    
-    "@types/node": "^24.10.9",
-    "@types/pg": "^8.16.0",
-    "@types/stripe": "^8.0.416",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
@@ -56,9 +47,17 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/lodash": "^4.17.14",
     "@types/multer": "^1.4.13",
+    "@types/node": "^24.10.9",
     "@types/nodemailer": "^6.4.17",
+    "@types/pg": "^8.16.0",
     "@types/pino": "^7.0.4",
-    "@types/uuid": "^10.0.0"
+    "@types/stripe": "^8.0.416",
+    "@types/uuid": "^10.0.0",
+    "nodemon": "^3.1.10",
+    "prisma": "^7.3.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "keywords": [],
   "author": "",
